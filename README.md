@@ -3,7 +3,7 @@ Simulador de corridas
 
 ## Checklist
 ### Simulador de corrida
-- [ ] Arranque do servidor, leitura do ficheiro de configurações, validação dos dados e aplicação das configurações lidas (**META 1**)
+- [X] Arranque do servidor, leitura do ficheiro de configurações, validação dos dados e aplicação das configurações lidas (**META 1**)
 - [ ] Criação	do processo	Gestor de	Corrida	e	Gestor de	Avarias (**META 1**)
 - [ ] Criação	da memória partilhada (**META 1**)
 - [ ] Criação	do named	pipe

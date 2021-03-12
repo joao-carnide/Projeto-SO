@@ -1,3 +1,5 @@
+// João Filipe Carnide de Jesus Nunes   2017247442
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -9,7 +11,8 @@
 #include <time.h>
 #include <string.h>
 
-typedef struct dados {
+// estrutura com as configurações do ficheiro
+typedef struct Dados {
     int unidades_sec;
     int d_volta, n_voltas;
     int equipas;
@@ -17,10 +20,10 @@ typedef struct dados {
     int T_Box_min, T_Box_Max;
     int capacidade;
 } dados;
+typedef dados* config;
 
 typedef struct corrida {
     dados * config;
 } corrida;
 
-corrida * cria_corrida();
-corrida * read_config(char* fname, corrida* race);
+dados* read_config(char* fname);
