@@ -69,7 +69,6 @@ int main(int argc, char *argv[]) {
     race_config = read_config("config.txt");
     
     child_corrida = fork();
-
     if (child_corrida == 0) {
         gestor_corrida();
         exit(0);
