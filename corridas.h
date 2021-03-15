@@ -11,7 +11,9 @@
 #include <time.h>
 #include <string.h>
 
-// estrutura com as configurações do ficheiro
+#define PROCS_INCIAIS 2
+
+// estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
     int unidades_sec;
     int d_volta, n_voltas;
@@ -27,3 +29,6 @@ typedef struct corrida {
 } corrida;
 
 dados* read_config(char* fname);
+void gestor_corrida();
+void gestor_avarias();
+void gestor_equipa();

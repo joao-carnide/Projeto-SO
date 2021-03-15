@@ -3,6 +3,7 @@
 #include "corridas.h"
 
 config race_config;
+pid_t child_corrida, child_avarias;
 
 dados* read_config(char* fname) {
     char buffer[20];
@@ -41,14 +42,49 @@ dados* read_config(char* fname) {
     return race;
 }
 
+void gestor_corrida() {
+    printf("[%d] Gestor de Corrida\n", getpid());
+    // printf("I'm [%d] and my father is [%d]\n", getpid(), getppid());
+    for (int i = 0; i < race_config->equipas; i++) {
+        pid_t childs_equipas = fork();
+        if (childs_equipas == 0) {
+            gestor_equipa();
+            exit(0);
+        }
+        wait(NULL);
+    }
+}
+
+void gestor_avarias() {
+    printf("[%d] Gestor de Avarias\n", getpid());
+    // printf("I'm [%d] and my father is [%d]\n", getpid(), getppid());
+}
+
+void gestor_equipa() {
+    printf("[%d] Gestor de Equipa\n", getpid());
+    // printf("I'm [%d] and my father is [%d]\n", getpid(), getppid());
+}
+
 int main(int argc, char *argv[]) {
     race_config = read_config("config.txt");
-    printf("Número de unidades de tempo por segundo: %d\n", race_config->unidades_sec);
-    printf("Distância de cada volta: %d metros\n", race_config->d_volta);
-    printf("Número de voltas da corrida: %d\n", race_config->n_voltas);
-    printf("Número de equipas: %d\n", race_config->equipas);
-    printf("T_Avaria: %d\n", race_config->T_Avaria);
-    printf("T_Box_min: %d\nT_Box_Max: %d\n", race_config->T_Box_min, race_config->T_Box_Max);
-    printf("Capacidade do deposito: %d litros\n", race_config->capacidade);
+    
+    child_corrida = fork();
+
+    if (child_corrida == 0) {
+        gestor_corrida();
+        exit(0);
+    }
+    else {
+        child_avarias = fork();
+        if (child_avarias == 0) {
+            gestor_avarias();
+            exit(0);
+        }
+    }
+    for (int i = 0; i < PROCS_INCIAIS; i++) {
+        wait(NULL);
+    }
+    printf("[%d] Main\n", getpid());
+
     exit(0);
 }
