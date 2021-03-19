@@ -1,4 +1,5 @@
 // João Filipe Carnide de Jesus Nunes   2017247442
+// Rui Alexandre Coelho Tapadinhas      2018283200
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -4,14 +4,14 @@ Simulador de corridas
 ## Checklist
 ### Simulador de corrida
 - [X] Arranque do servidor, leitura do ficheiro de configurações, validação dos dados e aplicação das configurações lidas (**META 1**)
-- [ ] Criação	do processo	Gestor de	Corrida	e	Gestor de	Avarias (**META 1**)
+- [X] Criação	do processo	Gestor de	Corrida	e	Gestor de	Avarias (**META 1**)
 - [ ] Criação	da memória partilhada (**META 1**)
 - [ ] Criação	do named	pipe
 - [ ] Escrever a informação	estatística	no ecrã como resposta	ao sinal SIGTSTP
 - [ ] Captura	o	sinal	SIGINT, termina	a	corrida e	liberta	os recursos
 
 ### Gestor de Corrida
-- [ ] Criação	dos	processos	Gestores de Equipa (**META 1**)
+- [X] Criação	dos	processos	Gestores de Equipa (**META 1**)
 - [ ] Criação dos unnamed pipes
 - [ ] Ler e validar comandos lidos do named pipe
 - [ ] Começar e terminar uma corrida

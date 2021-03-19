@@ -1,4 +1,5 @@
 // João Filipe Carnide de Jesus Nunes   2017247442
+// Rui Alexandre Coelho Tapadinhas      2018283200
 
 #include "corridas.h"
 
@@ -44,7 +45,6 @@ dados* read_config(char* fname) {
 
 void gestor_corrida() {
     printf("[%d] Gestor de Corrida\n", getpid());
-    // printf("I'm [%d] and my father is [%d]\n", getpid(), getppid());
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
@@ -57,12 +57,10 @@ void gestor_corrida() {
 
 void gestor_avarias() {
     printf("[%d] Gestor de Avarias\n", getpid());
-    // printf("I'm [%d] and my father is [%d]\n", getpid(), getppid());
 }
 
 void gestor_equipa() {
     printf("[%d] Gestor de Equipa\n", getpid());
-    // printf("I'm [%d] and my father is [%d]\n", getpid(), getppid());
 }
 
 int main(int argc, char *argv[]) {
