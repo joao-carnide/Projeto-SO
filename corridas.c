@@ -2,8 +2,10 @@
 // Rui Alexandre Coelho Tapadinhas      2018283200
 
 #include "corridas.h"
+// #define DEBUG
 
 config race_config;
+pid_t race_manager;
 pid_t child_corrida, child_avarias;
 
 dados* read_config(char* fname) {
@@ -44,7 +46,9 @@ dados* read_config(char* fname) {
 }
 
 void gestor_corrida() {
+    #ifdef DEBUG
     printf("[%d] Gestor de Corrida\n", getpid());
+    #endif
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
@@ -56,11 +60,15 @@ void gestor_corrida() {
 }
 
 void gestor_avarias() {
+    #ifdef DEBUG
     printf("[%d] Gestor de Avarias\n", getpid());
+    #endif
 }
 
 void gestor_equipa() {
+    #ifdef DEBUG
     printf("[%d] Gestor de Equipa\n", getpid());
+    #endif
 }
 
 int main(int argc, char *argv[]) {
@@ -81,7 +89,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < PROCS_INCIAIS; i++) {
         wait(NULL);
     }
-    printf("[%d] Main\n", getpid());
+    race_manager = getpid();
 
     exit(0);
 }
