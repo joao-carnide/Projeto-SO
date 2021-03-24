@@ -19,6 +19,7 @@ typedef struct Dados {
     int unidades_sec;
     int d_volta, n_voltas;
     int equipas;
+    int max_cars_team;
     int T_Avaria;
     int T_Box_min, T_Box_Max;
     int capacidade;

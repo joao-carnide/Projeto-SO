@@ -5,7 +5,7 @@
 // #define DEBUG
 
 config race_config;
-pid_t race_manager;
+pid_t race_sim;
 pid_t child_corrida, child_avarias;
 
 dados* read_config(char* fname) {
@@ -31,6 +31,8 @@ dados* read_config(char* fname) {
             printf("Race config file rejected, number of teams [%d] must be at least 3\n", race->equipas);
             exit(1);
         }
+        fgets(buffer, 20, fp);
+        race->max_cars_team = atoi(buffer);
         fgets(buffer, 20, fp);
         race->T_Avaria = atoi(buffer);
         fgets(buffer, 20, fp);
@@ -89,7 +91,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < PROCS_INCIAIS; i++) {
         wait(NULL);
     }
-    race_manager = getpid();
+    race_sim = getpid();
 
     exit(0);
 }

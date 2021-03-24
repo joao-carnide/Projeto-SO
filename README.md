@@ -24,7 +24,7 @@ Simulador de corridas
 - [ ] Notificar o Gestor de Corrida através dos unnamed pipes
 
 ### Gestor de Equipa
-- [ ] Criar threads carro (**META 1**)
+- [ ] Criar threads carro (**META 1 - preliminar**)
 - [ ] Gerir box
 - [ ] Gerir abastecimento dos carros
 
