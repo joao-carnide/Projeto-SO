@@ -13,6 +13,8 @@
 #include <string.h>
 
 #define PROCS_INCIAIS 2
+#define MAX_CAR_TEAM 100
+#define MAX_EQUIPAS 100
 
 // estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
@@ -26,11 +28,27 @@ typedef struct Dados {
 } dados;
 typedef dados* config;
 
-typedef struct corrida {
-    dados * config;
-} corrida;
+typedef struct carro {
+    int num;
+    int speed;
+    int consumption;
+    int reliability;
+} carro;
+
+typedef struct equipa {
+    char* nome_equipa;
+    char* box;
+    carro* carros [MAX_CAR_TEAM];
+} equipa;
+
+typedef struct mem_structure {
+    equipa* equipas [MAX_EQUIPAS];
+    time_t init_time;
+} mem_structure;
+
 
 dados* read_config(char* fname);
 void gestor_corrida();
 void gestor_avarias();
 void gestor_equipa();
+void init_shm();

@@ -2,11 +2,14 @@
 // Rui Alexandre Coelho Tapadinhas      2018283200
 
 #include "corridas.h"
-// #define DEBUG
+#define DEBUG
+#define TIME_ABASTECIMENTO 2
 
 config race_config;
 pid_t race_sim;
 pid_t child_corrida, child_avarias;
+int shmid;
+mem_structure *race_stats;
 
 dados* read_config(char* fname) {
     char buffer[20];
@@ -73,9 +76,25 @@ void gestor_equipa() {
     #endif
 }
 
+void init_shm() {
+    if ((shmid = shmget(IPC_PRIVATE, sizeof(mem_structure), IPC_CREAT|0766)) < 0) {
+		perror("Error in shmget with IPC_CREAT\n");
+		exit(1);
+	}
+
+	if ((race_stats = shmat(shmid, NULL, 0)) == (mem_structure*)-1) {
+		perror("Shmat error!");
+		exit(1);
+	}
+}
+
+
 int main(int argc, char *argv[]) {
     race_config = read_config("config.txt");
     
+    init_shm();
+    
+
     child_corrida = fork();
     if (child_corrida == 0) {
         gestor_corrida();
