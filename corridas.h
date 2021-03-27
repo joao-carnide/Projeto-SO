@@ -48,7 +48,9 @@ typedef struct mem_structure {
 
 
 dados* read_config(char* fname);
+char* get_current_time();
 void gestor_corrida();
 void gestor_avarias();
 void gestor_equipa();
 void init_shm();
+void terminate();
