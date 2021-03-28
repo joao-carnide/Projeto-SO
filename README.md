@@ -24,7 +24,7 @@ Simulador de corridas
 - [ ] Notificar o Gestor de Corrida através dos unnamed pipes
 
 ### Gestor de Equipa
-- [ ] Criar threads carro (**META 1 - preliminar**)
+- [X] Criar threads carro (**META 1 - preliminar**)
 - [ ] Gerir box
 - [ ] Gerir abastecimento dos carros
 
@@ -35,7 +35,7 @@ Simulador de corridas
 - [ ] Envio sincronizado do output para o ficheiro de log e ecrã (**META 1**)
 
 ### Geral
-- [ ] Criar um makefile
+- [X] Criar um makefile
 - [ ] Diagrama com a arquitetura e mecanismos de sincronização (**META 1 - preliminar**)
 - [ ] Suporte de concorrência no tratamento de pedidos
 - [ ] Deteção e tratamento de erros
