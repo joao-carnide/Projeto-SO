@@ -1,6 +1,9 @@
 // João Filipe Carnide de Jesus Nunes   2017247442
 // Rui Alexandre Coelho Tapadinhas      2018283200
 
+#ifndef CORRIDAS_INCLUDED
+#define CORRIDAS_INCLUDED
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -11,10 +14,13 @@
 #include <sys/shm.h>
 #include <time.h>
 #include <string.h>
+#include <pthread.h>
 
 #define PROCS_INCIAIS 2
 #define MAX_CAR_TEAM 100
 #define MAX_EQUIPAS 100
+#define DEBUG
+#define TIME_ABASTECIMENTO 2
 
 // estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
@@ -31,7 +37,7 @@ typedef dados* config;
 typedef struct carro {
     int num;
     int speed;
-    int consumption;
+    float consumption;
     int reliability;
 } carro;
 
@@ -53,4 +59,8 @@ void gestor_corrida();
 void gestor_avarias();
 void gestor_equipa();
 void init_shm();
+void *check_carros( void* id_thread);
 void terminate();
+
+
+#endif

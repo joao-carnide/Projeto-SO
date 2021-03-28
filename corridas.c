@@ -2,8 +2,7 @@
 // Rui Alexandre Coelho Tapadinhas      2018283200
 
 #include "corridas.h"
-#define DEBUG
-#define TIME_ABASTECIMENTO 2
+
 
 config race_config;
 pid_t race_sim;
@@ -11,6 +10,8 @@ pid_t child_corrida, child_avarias;
 int shmid;
 mem_structure *race_stats;
 FILE * fp_log;
+pthread_t threads_carro [MAX_CAR_TEAM];
+int threads_ids [MAX_CAR_TEAM];
 
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
@@ -88,6 +89,28 @@ void gestor_equipa() {
     #ifdef DEBUG
     printf("[%d] Gestor de Equipa\n", getpid());
     #endif
+    for (int i = 0; i < race_config->max_cars_team; i++) {
+        threads_ids[i] = i+1;
+        pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
+        #ifdef DEBUG
+        printf("Thread carro %d created.\n", i);
+        #endif
+    }
+
+    for (int i = 0; i < race_config->max_cars_team; i++) {
+        pthread_join(threads_carro[i], NULL);
+        #ifdef DEBUG
+		printf("Thread carro %d joined\n", i);
+        #endif
+    }
+
+}
+
+void *check_carros( void* id_thread) {
+    //int id = *((int *)id_thread);
+    //printf("Thread carro %d created.\n", id);
+    //usleep(100);
+    pthread_exit(NULL);
 }
 
 // Funções de inicialização
@@ -111,7 +134,7 @@ void terminate() {
 }
 
 int main(int argc, char *argv[]) {
-    fp_log = fopne("log.txt", "w");
+    fp_log = fopen("log.txt", "w");
     race_config = read_config("config.txt");
     init_shm();
     
