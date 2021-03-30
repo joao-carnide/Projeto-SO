@@ -52,7 +52,10 @@ dados* read_config(char* fname) {
         race->T_Box_Max = atoi(ptr_buffer);
         fgets(buffer, 20, fp);
         race->capacidade = atoi(buffer);
+        #ifdef DEBUG
+        write_log(fp_log, "RACE CONFIGURATIONS VALIDATED SUCCESSFULLY");
         //printf("Race configurations validated successfully!\n");
+        #endif
     }
     return race;
 }
@@ -142,13 +145,17 @@ void init_shm() {
 		perror("Shmat error!");
 		exit(1);
 	}
-    printf("Memória partilhada criada com sucesso\n");
+    #ifdef DEBUG
+    write_log(fp_log, "SHARED MEMORY CREATED SUCCESSFULLY");
+    #endif
 }
 
 void init_semaphores() {
     sem_unlink("ACESSO");
     semaforo = sem_open("ACESSO", O_CREAT|O_EXCL, 0700, 0);
-    //printf("Semáforo ACESSO criado com sucesso\n");
+    #ifdef DEBUG
+    write_log(fp_log, "SEMAPHORE CREATED SUCCESSFULLY");
+    #endif
 }
 
 void terminate() {
