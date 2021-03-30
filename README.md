@@ -39,6 +39,6 @@ Simulador de corridas
 - [ ] Diagrama com a arquitetura e mecanismos de sincronização (**META 1 - preliminar**)
 - [ ] Suporte de concorrência no tratamento de pedidos
 - [ ] Deteção e tratamento de erros
-- [ ] Sincronização com mecanismos adequados (semáforos, mutexes ou variáveis de condição) (**META 1 - preliminar**)
+- [X] Sincronização com mecanismos adequados (semáforos, mutexes ou variáveis de condição) (**META 1 - preliminar**)
 - [ ] Prevenção de interrupções indesejadas por sinais e fornecer a resposta adequada aos vários sinais
 - [ ] Após receção de SIGINT, terminação controlada de todos os processos e threads, e libertação de todos os recursos

@@ -3,7 +3,6 @@
 
 #include "corridas.h"
 
-
 config race_config;
 pid_t race_sim;
 pid_t child_corrida, child_avarias;
@@ -12,6 +11,11 @@ mem_structure *race_stats;
 FILE * fp_log;
 pthread_t threads_carro [MAX_CAR_TEAM];
 int threads_ids [MAX_CAR_TEAM];
+sem_t *semaforo;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t box_open = PTHREAD_COND_INITIALIZER;
+pthread_cond_t box_reserved = PTHREAD_COND_INITIALIZER;
+pthread_cond_t box_ocupied = PTHREAD_COND_INITIALIZER;
 
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
@@ -48,7 +52,7 @@ dados* read_config(char* fname) {
         race->T_Box_Max = atoi(ptr_buffer);
         fgets(buffer, 20, fp);
         race->capacidade = atoi(buffer);
-        printf("Race configurations validated successfully!\n");
+        //printf("Race configurations validated successfully!\n");
     }
     return race;
 }
@@ -61,13 +65,20 @@ char* get_current_time() {
     current_time = (char*)malloc(sizeof(char)*8); // 2 digitos de hora + 2 digitos minuto + 2 digitos segundo + 2 :
     time(&rawtime);
     timeinfo = localtime(&rawtime);
-    sprintf(current_time, "%d:%d:%d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+    sprintf(current_time, "%02d:%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
     return current_time;
+}
+
+void write_log(FILE *fp, char* message) {
+    char* str = (char*)malloc(sizeof(char)*1024);
+    sprintf(str, "%s %s\n",get_current_time(), message);
+    fprintf(fp, "%s", str);
+    printf("%s", str);
 }
 
 void gestor_corrida() {
     #ifdef DEBUG
-    printf("[%d] Gestor de Corrida\n", getpid());
+    write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
@@ -81,35 +92,42 @@ void gestor_corrida() {
 
 void gestor_avarias() {
     #ifdef DEBUG
-    printf("[%d] Gestor de Avarias\n", getpid());
+    write_log(fp_log, "MALFUNCTION MANAGER PROCESS CREATED");
     #endif
 }
 
 void gestor_equipa() {
     #ifdef DEBUG
-    printf("[%d] Gestor de Equipa\n", getpid());
+    write_log(fp_log, "TEAM MANAGER PROCESS CREATED");
     #endif
     for (int i = 0; i < race_config->max_cars_team; i++) {
         threads_ids[i] = i+1;
         pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
         #ifdef DEBUG
-        printf("Thread carro %d created.\n", i);
+        char* str = (char*)malloc(sizeof(char)*1024);
+        sprintf(str, "CAR THREAD %d CREATED", i+1);
+        write_log(fp_log, str);
         #endif
     }
 
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[i], NULL);
         #ifdef DEBUG
-		printf("Thread carro %d joined\n", i);
+		//printf("Thread carro %d joined\n", i+1);
         #endif
     }
 
 }
 
 void *check_carros( void* id_thread) {
-    //int id = *((int *)id_thread);
-    //printf("Thread carro %d created.\n", id);
-    //usleep(100);
+    int id = *((int *)id_thread);
+    pthread_mutex_lock(&mutex);
+    char* str = (char*)malloc(sizeof(char)*1024);
+    sprintf(str, "CAR THREAD %d DOING STUFF...", id);
+    write_log(fp_log, str);
+    pthread_mutex_unlock(&mutex);
+    //printf("Thread carro %d leaving\n", id);
+    sleep(1);
     pthread_exit(NULL);
 }
 
@@ -119,15 +137,24 @@ void init_shm() {
 		perror("Error in shmget with IPC_CREAT\n");
 		exit(1);
 	}
-
 	if ((race_stats = shmat(shmid, NULL, 0)) == (mem_structure*)-1) {
 		perror("Shmat error!");
 		exit(1);
 	}
+    printf("Memória partilhada criada com sucesso\n");
+}
+
+void init_semaphores() {
+    sem_unlink("ACESSO");
+    semaforo = sem_open("ACESSO", O_CREAT|O_EXCL, 0700, 0);
+    //printf("Semáforo ACESSO criado com sucesso\n");
 }
 
 void terminate() {
+    write_log(fp_log, "SIMULATOR CLOSING");
     fclose(fp_log);
+    sem_close(semaforo);
+    sem_unlink("ACESSO");
     shmdt(race_stats);
     shmctl(shmid, IPC_RMID, NULL);
     exit(0);
@@ -135,10 +162,10 @@ void terminate() {
 
 int main(int argc, char *argv[]) {
     fp_log = fopen("log.txt", "w");
+    write_log(fp_log, "SIMULATOR STARTING");
     race_config = read_config("config.txt");
     init_shm();
-    
-
+    init_semaphores();
     child_corrida = fork();
     if (child_corrida == 0) {
         gestor_corrida();
@@ -155,6 +182,5 @@ int main(int argc, char *argv[]) {
         wait(NULL);
     }
     race_sim = getpid();
-
     terminate();
 }

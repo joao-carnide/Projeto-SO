@@ -15,6 +15,8 @@
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/fcntl.h>
+#include <semaphore.h>
 
 #define PROCS_INCIAIS 2
 #define MAX_CAR_TEAM 100
@@ -55,10 +57,12 @@ typedef struct mem_structure {
 
 dados* read_config(char* fname);
 char* get_current_time();
+void write_log(FILE *fp, char* message);
 void gestor_corrida();
 void gestor_avarias();
 void gestor_equipa();
 void init_shm();
+void init_semaphores();
 void *check_carros( void* id_thread);
 void terminate();
 
