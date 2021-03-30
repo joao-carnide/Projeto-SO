@@ -32,7 +32,7 @@ Simulador de corridas
 - [ ] Gerar avarias para os vários carros, baseado na fiabilidade de cada um
 
 ### Ficheiro de log
-- [ ] Envio sincronizado do output para o ficheiro de log e ecrã (**META 1**)
+- [X] Envio sincronizado do output para o ficheiro de log e ecrã (**META 1**)
 
 ### Geral
 - [X] Criar um makefile
