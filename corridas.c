@@ -80,6 +80,7 @@ void gestor_corrida() {
     #ifdef DEBUG
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
+    fflush(fp_log);
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
@@ -127,7 +128,7 @@ void *check_carros( void* id_thread) {
     write_log(fp_log, str);
     pthread_mutex_unlock(&mutex);
     //printf("Thread carro %d leaving\n", id);
-    sleep(1);
+    sleep(2);
     pthread_exit(NULL);
 }
 
@@ -166,6 +167,7 @@ int main(int argc, char *argv[]) {
     race_config = read_config("config.txt");
     init_shm();
     init_semaphores();
+    fflush(fp_log);
     child_corrida = fork();
     if (child_corrida == 0) {
         gestor_corrida();
