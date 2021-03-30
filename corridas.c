@@ -11,7 +11,7 @@ mem_structure *race_stats;
 FILE * fp_log;
 pthread_t threads_carro [MAX_CAR_TEAM];
 int threads_ids [MAX_CAR_TEAM];
-sem_t *semaforo;
+sem_t *semaforo, *sem_log;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t box_open = PTHREAD_COND_INITIALIZER;
 pthread_cond_t box_reserved = PTHREAD_COND_INITIALIZER;
@@ -152,9 +152,11 @@ void init_shm() {
 
 void init_semaphores() {
     sem_unlink("ACESSO");
-    semaforo = sem_open("ACESSO", O_CREAT|O_EXCL, 0700, 0);
+    semaforo = sem_open("ACESSO", O_CREAT|O_EXCL, 0766, 1);
+    sem_unlink("LOG");
+    sem_log = sem_open("LOG", O_CREAT|O_EXCL, 0766, 1);
     #ifdef DEBUG
-    write_log(fp_log, "SEMAPHORE CREATED SUCCESSFULLY");
+    write_log(fp_log, "SEMAPHORES CREATED SUCCESSFULLY");
     #endif
 }
 
@@ -163,6 +165,8 @@ void terminate() {
     fclose(fp_log);
     sem_close(semaforo);
     sem_unlink("ACESSO");
+    sem_close(sem_log);
+    sem_unlink("LOG");
     shmdt(race_stats);
     shmctl(shmid, IPC_RMID, NULL);
     exit(0);
