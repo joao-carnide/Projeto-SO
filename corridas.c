@@ -87,6 +87,11 @@ void gestor_corrida() {
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
+            #ifdef DEBUG
+            char* str = (char*)malloc(sizeof(char)*50);
+            sprintf(str, "TEAM %d MANAGER PROCESS CREATED", i+1);
+            write_log(fp_log, str);
+            #endif
             gestor_equipa();
             exit(0);
         }
@@ -101,9 +106,6 @@ void gestor_avarias() {
 }
 
 void gestor_equipa() {
-    #ifdef DEBUG
-    write_log(fp_log, "TEAM MANAGER PROCESS CREATED");
-    #endif
     for (int i = 0; i < race_config->max_cars_team; i++) {
         threads_ids[i] = i+1;
         pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
@@ -113,7 +115,6 @@ void gestor_equipa() {
         write_log(fp_log, str);
         #endif
     }
-
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[i], NULL);
         #ifdef DEBUG
@@ -129,9 +130,8 @@ void *check_carros( void* id_thread) {
     char* str = (char*)malloc(sizeof(char)*1024);
     sprintf(str, "CAR THREAD %d DOING STUFF...", id);
     write_log(fp_log, str);
-    pthread_mutex_unlock(&mutex);
-    //printf("Thread carro %d leaving\n", id);
     sleep(2);
+    pthread_mutex_unlock(&mutex);
     pthread_exit(NULL);
 }
 
