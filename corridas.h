@@ -23,6 +23,7 @@
 #define MAX_EQUIPAS 100
 #define DEBUG
 #define TIME_ABASTECIMENTO 2
+#define TOP_FIVE 5
 
 // estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
@@ -41,6 +42,8 @@ typedef struct carro {
     int speed;
     float consumption;
     int reliability;
+    int n_voltas;
+    int n_paragens;
 } carro;
 
 typedef struct equipa {
@@ -52,8 +55,17 @@ typedef struct equipa {
 typedef struct mem_structure {
     equipa* equipas [MAX_EQUIPAS];
     time_t init_time;
+    int t_avarias;
+    int n_paragens;
 } mem_structure;
 
+typedef struct Estatistica {
+    carro* top_carros[TOP_FIVE];
+    carro* ultimo_carro;
+    int t_avarias;
+    int n_paragens;
+    int n_carros_pista;
+} estatisticas;
 
 dados* read_config(char* fname);
 char* get_current_time();

@@ -54,7 +54,6 @@ dados* read_config(char* fname) {
         race->capacidade = atoi(buffer);
         #ifdef DEBUG
         write_log(fp_log, "RACE CONFIGURATIONS VALIDATED SUCCESSFULLY");
-        //printf("Race configurations validated successfully!\n");
         #endif
     }
     return race;
@@ -177,10 +176,10 @@ void terminate() {
 
 int main(int argc, char *argv[]) {
     fp_log = fopen("log.txt", "w");
-    write_log(fp_log, "SIMULATOR STARTING");
-    race_config = read_config("config.txt");
     init_shm();
     init_semaphores();
+    write_log(fp_log, "SIMULATOR STARTING");
+    race_config = read_config("config.txt");
     child_corrida = fork();
     if (child_corrida == 0) {
         gestor_corrida();
