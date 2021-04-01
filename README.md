@@ -36,7 +36,7 @@ Simulador de corridas
 
 ### Geral
 - [X] Criar um makefile
-- [ ] Diagrama com a arquitetura e mecanismos de sincronização (**META 1 - preliminar**)
+- [X] Diagrama com a arquitetura e mecanismos de sincronização (**META 1 - preliminar**)
 - [ ] Suporte de concorrência no tratamento de pedidos
 - [ ] Deteção e tratamento de erros
 - [X] Sincronização com mecanismos adequados (semáforos, mutexes ou variáveis de condição) (**META 1 - preliminar**)
