@@ -132,6 +132,9 @@ void *check_carros( void* id_thread) {
     write_log(fp_log, str);
     sleep(2);
     pthread_mutex_unlock(&mutex);
+    sprintf(str, "CAR THREAD %d LEAVING...", id);
+    write_log(fp_log, str);
+    sleep(1);
     pthread_exit(NULL);
 }
 
