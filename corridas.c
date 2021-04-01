@@ -176,10 +176,10 @@ void terminate() {
 
 int main(int argc, char *argv[]) {
     fp_log = fopen("log.txt", "w");
-    init_shm();
-    init_semaphores();
     write_log(fp_log, "SIMULATOR STARTING");
     race_config = read_config("config.txt");
+    init_shm();
+    init_semaphores();
     child_corrida = fork();
     if (child_corrida == 0) {
         gestor_corrida();
