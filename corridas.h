@@ -55,7 +55,7 @@ typedef struct equipa {
 typedef struct mem_structure {
     equipa* equipas [MAX_EQUIPAS];
     time_t init_time;
-    int t_avarias;
+    int total_avarias;
     int n_paragens;
 } mem_structure;
 
