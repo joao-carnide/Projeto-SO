@@ -49,19 +49,19 @@ typedef struct carro {
 typedef struct equipa {
     char* nome_equipa;
     char* box;
-    carro* carros [MAX_CAR_TEAM];
+    carro carros [MAX_CAR_TEAM];
 } equipa;
 
 typedef struct mem_structure {
-    equipa* equipas [MAX_EQUIPAS];
+    equipa equipas [MAX_EQUIPAS];
     time_t init_time;
     int total_avarias;
     int n_paragens;
 } mem_structure;
 
 typedef struct Estatistica {
-    carro* top_carros[TOP_FIVE];
-    carro* ultimo_carro;
+    carro top_carros[TOP_FIVE];
+    carro ultimo_carro;
     int t_avarias;
     int n_paragens;
     int n_carros_pista;

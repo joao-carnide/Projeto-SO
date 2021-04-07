@@ -8,8 +8,6 @@ pid_t race_sim;
 pid_t child_corrida, child_avarias;
 int shmid_race, shmid_equipa, shmid_carro;
 mem_structure *shared_race;
-equipa *shared_equipa;
-carro *shared_carro;
 FILE * fp_log;
 pthread_t threads_carro [MAX_CAR_TEAM];
 int threads_ids [MAX_CAR_TEAM];
@@ -78,6 +76,7 @@ void write_log(FILE *fp, char* message) {
     sprintf(str, "%s %s\n",get_current_time(), message);
     fprintf(fp, "%s", str);
     printf("%s", str);
+    free(str);
     fflush(fp_log);
 }
 
@@ -92,12 +91,13 @@ void gestor_corrida() {
             char* str = (char*)malloc(sizeof(char)*50);
             sprintf(str, "TEAM %d MANAGER PROCESS CREATED", i+1);
             write_log(fp_log, str);
+            free(str);
             #endif
             gestor_equipa();
             exit(0);
         }
-        wait(NULL);
     }
+    wait(NULL);
 }
 
 void gestor_avarias() {
@@ -114,6 +114,7 @@ void gestor_equipa() {
         char* str = (char*)malloc(sizeof(char)*1024);
         sprintf(str, "CAR THREAD %d CREATED", i+1);
         write_log(fp_log, str);
+        free(str);
         #endif
     }
     for (int i = 0; i < race_config->max_cars_team; i++) {
@@ -135,13 +136,13 @@ void *check_carros( void* id_thread) {
     pthread_mutex_unlock(&mutex);
     sprintf(str, "CAR THREAD %d LEAVING...", id);
     write_log(fp_log, str);
+    free(str);
     sleep(1);
     pthread_exit(NULL);
 }
 
 // Funções de inicialização
 void init_shm() {
-    // memória dados da corrida
     if ((shmid_race = shmget(IPC_PRIVATE, sizeof(mem_structure), IPC_CREAT|0766)) < 0) {
 		perror("Error in race shmget with IPC_CREAT\n");
 		exit(1);
@@ -150,26 +151,8 @@ void init_shm() {
 		perror("Shmat race error!\n");
 		exit(1);
 	}
-    // Memória dados da equipa
-    if ((shmid_equipa = shmget(IPC_PRIVATE, sizeof(equipa), IPC_CREAT|0766)) < 0) {
-        perror("Error in teams shmget with IPC_CREAT\n");
-        exit(1);
-    }
-    if ((shared_equipa = shmat(shmid_equipa, NULL, 0)) == (equipa*)-1) {
-        perror("Shmat teams error!\n");
-        exit(1);
-    }
-    // memória dados do carro
-    if ((shmid_carro = shmget(IPC_PRIVATE, sizeof(carro), IPC_CREAT|0766)) < 0) {
-        perror("Error in cars shmget with IPC_CREAT\n");
-        exit(1);
-    }
-    if ((shared_carro = shmat(shmid_carro, NULL, 0)) == (carro*)-1) {
-        perror("Shmat cars error!\n");
-        exit(1);
-    }
     #ifdef DEBUG
-    write_log(fp_log, "SHARED MEMORIES CREATED SUCCESSFULLY");
+    write_log(fp_log, "SHARED MEMORY CREATED SUCCESSFULLY");
     #endif
 }
 
@@ -192,10 +175,6 @@ void terminate() {
     sem_unlink("LOG");
     shmdt(shared_race);
     shmctl(shmid_race, IPC_RMID, NULL);
-    shmdt(shared_equipa);
-    shmctl(shmid_equipa, IPC_RMID, NULL);
-    shmdt(shared_carro);
-    shmctl(shmid_carro, IPC_RMID, NULL);
     exit(0);
 }
 
