@@ -72,18 +72,30 @@ char* get_current_time() {
 }
 
 void write_log(FILE *fp, char* message) {
+    sem_wait(sem_log);
     char* str = (char*)malloc(sizeof(char)*1024);
     sprintf(str, "%s %s\n",get_current_time(), message);
     fprintf(fp, "%s", str);
     printf("%s", str);
     free(str);
     fflush(fp_log);
+    sem_post(sem_log);
+}
+
+void print_estatisticas(int signal) {
+    printf("\n^Z PRESSED. PRINTING STATISTICS\n");
+}
+
+void interrompe(int signal) {
+    kill(race_sim, SIGINT);
+    wait(NULL);
 }
 
 void gestor_corrida() {
     #ifdef DEBUG
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
+    signal(SIGUSR1, interrompe);
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
@@ -151,9 +163,6 @@ void init_shm() {
 		perror("Shmat race error!\n");
 		exit(1);
 	}
-    #ifdef DEBUG
-    write_log(fp_log, "SHARED MEMORY CREATED SUCCESSFULLY");
-    #endif
 }
 
 void init_semaphores() {
@@ -161,12 +170,10 @@ void init_semaphores() {
     semaforo = sem_open("ACESSO", O_CREAT|O_EXCL, 0766, 1);
     sem_unlink("LOG");
     sem_log = sem_open("LOG", O_CREAT|O_EXCL, 0766, 1);
-    #ifdef DEBUG
-    write_log(fp_log, "SEMAPHORES CREATED SUCCESSFULLY");
-    #endif
 }
 
-void terminate() {
+void terminate(int signal) {
+    printf("\n^C PRESSED. TERMINATING PROGRAM\n");
     write_log(fp_log, "SIMULATOR CLOSING");
     fclose(fp_log);
     sem_close(semaforo);
@@ -180,10 +187,10 @@ void terminate() {
 
 int main(int argc, char *argv[]) {
     fp_log = fopen("log.txt", "w");
-    write_log(fp_log, "SIMULATOR STARTING");
-    race_config = read_config("config.txt");
     init_shm();
     init_semaphores();
+    write_log(fp_log, "SIMULATOR STARTING");
+    race_config = read_config("config.txt");
     child_corrida = fork();
     if (child_corrida == 0) {
         gestor_corrida();
@@ -200,5 +207,9 @@ int main(int argc, char *argv[]) {
         wait(NULL);
     }
     race_sim = getpid();
-    terminate();
+    signal(SIGINT, terminate);
+    signal(SIGTSTP, print_estatisticas);
+    while (1) {
+        
+    }
 }

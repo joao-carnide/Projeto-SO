@@ -76,7 +76,7 @@ void gestor_equipa();
 void init_shm();
 void init_semaphores();
 void *check_carros( void* id_thread);
-void terminate();
+void terminate(int signal);
 
 
 #endif
