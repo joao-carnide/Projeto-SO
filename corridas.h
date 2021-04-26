@@ -78,6 +78,7 @@ void gestor_avarias();
 void gestor_equipa();
 void init_shm();
 void init_semaphores();
+void init_pipe();
 void *check_carros( void* id_thread);
 void terminate(int signal);
 
