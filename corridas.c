@@ -4,18 +4,25 @@
 #include "corridas.h"
 
 config race_config;
+
 pid_t race_sim;
 pid_t child_corrida, child_avarias;
+
 int shmid_race, shmid_equipa, shmid_carro;
 mem_structure *shared_race;
+
 FILE * fp_log;
+
 pthread_t threads_carro [MAX_CAR_TEAM];
 int threads_ids [MAX_CAR_TEAM];
+
 sem_t *semaforo, *sem_log;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t box_open = PTHREAD_COND_INITIALIZER;
 pthread_cond_t box_reserved = PTHREAD_COND_INITIALIZER;
 pthread_cond_t box_ocupied = PTHREAD_COND_INITIALIZER;
+
+int fd_named_pipe;
 
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
@@ -172,6 +179,18 @@ void init_semaphores() {
     sem_log = sem_open("LOG", O_CREAT|O_EXCL, 0766, 1);
 }
 
+void init_pipe() {
+    unlink(PIPE_NAME);
+    if ((mkfifo(PIPE_NAME, O_CREAT|O_EXCL|0600) < 0) && (errno != EEXIST)) {
+        perror("Cannot create pipe");
+        exit(0);
+    }
+    if ((fd_named_pipe = open(PIPE_NAME, O_RDWR)) < 0) {
+        perror("Cannot open pipe for reading");
+        exit(0);
+    }
+}
+
 void terminate(int signal) {
     printf("\n^C PRESSED. TERMINATING PROGRAM\n");
     write_log(fp_log, "SIMULATOR CLOSING");
@@ -182,6 +201,7 @@ void terminate(int signal) {
     sem_unlink("LOG");
     shmdt(shared_race);
     shmctl(shmid_race, IPC_RMID, NULL);
+    unlink(PIPE_NAME);
     exit(0);
 }
 
@@ -189,6 +209,7 @@ int main(int argc, char *argv[]) {
     fp_log = fopen("log.txt", "w");
     init_shm();
     init_semaphores();
+    init_pipe();
     write_log(fp_log, "SIMULATOR STARTING");
     race_config = read_config("config.txt");
     child_corrida = fork();
