@@ -26,6 +26,7 @@
 #define MAX_EQUIPAS 100
 #define TIME_ABASTECIMENTO 2
 #define TOP_FIVE 5
+#define MAX 1000
 #define PIPE_NAME "named_pipe"
 
 // estrutura com as configurações do ficheiro config.txt
