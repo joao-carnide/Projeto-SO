@@ -103,7 +103,7 @@ void wrong_command(char* cmd) {
 /* Funções para as estatísticas */
 void print_estatisticas(int signal) {
     if (getpid() == race_sim) {
-        printf("\n^Z PRESSED. PRINTING STATISTICS\n");
+        write_log(fp_log, "SIGNAL SIGTSTP RECEIVED");
     }
 }
 
