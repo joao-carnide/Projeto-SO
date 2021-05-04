@@ -4,18 +4,27 @@
 #include "corridas.h"
 
 config race_config;
+
 pid_t race_sim;
 pid_t child_corrida, child_avarias;
+
 int shmid_race, shmid_equipa, shmid_carro;
 mem_structure *shared_race;
+
 FILE * fp_log;
+
 pthread_t threads_carro [MAX_CAR_TEAM];
 int threads_ids [MAX_CAR_TEAM];
+
 sem_t *semaforo, *sem_log;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t box_open = PTHREAD_COND_INITIALIZER;
 pthread_cond_t box_reserved = PTHREAD_COND_INITIALIZER;
 pthread_cond_t box_ocupied = PTHREAD_COND_INITIALIZER;
+
+sigset_t set_sinais;
+
+int fd_named_pipe;
 
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
@@ -59,7 +68,7 @@ dados* read_config(char* fname) {
     return race;
 }
 
-// Funções para o ficheiro log.txt
+/* Funções para o ficheiro log.txt */
 char* get_current_time() {
     char* current_time;
     time_t rawtime;
@@ -82,12 +91,26 @@ void write_log(FILE *fp, char* message) {
     sem_post(sem_log);
 }
 
-void print_estatisticas(int signal) {
-    printf("\n^Z PRESSED. PRINTING STATISTICS\n");
+void wrong_command(char* cmd) {
+    char* str = (char*)malloc(sizeof(char)*MAX);
+    sprintf(str, "WRONG COMMAND => %s", cmd);
+    write_log(fp_log, str);
+    free(str);
 }
 
+/* ----------------------------------------------------------------------------------------------------------- */
+
+/* Funções para as estatísticas */
+void print_estatisticas(int signal) {
+    if (getpid() == race_sim) {
+        write_log(fp_log, "SIGNAL SIGTSTP RECEIVED");
+    }
+}
+
+/* ----------------------------------------------------------------------------------------------------------- */
+
 void interrompe(int signal) {
-    kill(race_sim, SIGINT);
+    kill(race_sim, SIGTERM);
     wait(NULL);
 }
 
@@ -171,7 +194,9 @@ void gestor_corrida( ) {
             exit(0);
         }
     }
-    wait(NULL);
+    while (1) {
+
+    }
 }
 
 void gestor_avarias() {
@@ -215,7 +240,7 @@ void *check_carros( void* id_thread) {
     pthread_exit(NULL);
 }
 
-// Funções de inicialização
+/* Funções de inicialização */
 void init_shm() {
     if ((shmid_race = shmget(IPC_PRIVATE, sizeof(mem_structure), IPC_CREAT|0766)) < 0) {
 		perror("Error in race shmget with IPC_CREAT\n");
@@ -234,9 +259,34 @@ void init_semaphores() {
     sem_log = sem_open("LOG", O_CREAT|O_EXCL, 0766, 1);
 }
 
+void init_pipe() {
+    unlink(PIPE_NAME);
+    if ((mkfifo(PIPE_NAME, O_CREAT|O_EXCL|0600) < 0) && (errno != EEXIST)) {
+        perror("Cannot create pipe");
+        exit(0);
+    }
+    if ((fd_named_pipe = open(PIPE_NAME, O_RDWR)) < 0) {
+        perror("Cannot open pipe for reading");
+        exit(0);
+    }
+}
+
+void handle_signals() {
+    sigemptyset(&set_sinais);
+    sigaddset(&set_sinais, SIGINT);
+    sigaddset(&set_sinais, SIGTSTP);
+    sigaddset(&set_sinais, SIGUSR1);
+    signal(SIGINT, terminate);
+    signal(SIGTSTP, print_estatisticas);
+}
+
+/* ----------------------------------------------------------------------------------------------------------- */
+
 void terminate(int signal) {
-    printf("\n^C PRESSED. TERMINATING PROGRAM\n");
-    write_log(fp_log, "SIMULATOR CLOSING");
+    if (getpid() == race_sim) {
+        printf("\n^C PRESSED. TERMINATING PROGRAM\n");
+        write_log(fp_log, "SIMULATOR CLOSING");
+    }
     fclose(fp_log);
     sem_close(semaforo);
     sem_unlink("ACESSO");
@@ -244,17 +294,22 @@ void terminate(int signal) {
     sem_unlink("LOG");
     shmdt(shared_race);
     shmctl(shmid_race, IPC_RMID, NULL);
+    unlink(PIPE_NAME);
     exit(0);
 }
 
 int main(int argc, char *argv[]) {
+    race_sim = getpid();
     fp_log = fopen("log.txt", "w");
     init_shm();
     init_semaphores();
+    init_pipe();
     write_log(fp_log, "SIMULATOR STARTING");
     race_config = read_config("config.txt");
+    handle_signals();
     child_corrida = fork();
     if (child_corrida == 0) {
+        signal(SIGUSR1, interrompe);
         gestor_corrida();
         exit(0);
     }

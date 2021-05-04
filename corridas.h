@@ -17,15 +17,19 @@
 #include <pthread.h>
 #include <sys/fcntl.h>
 #include <semaphore.h>
+#include <signal.h>
+#include <sys/stat.h>
 
+#define DEBUG
 #define PROCS_INCIAIS 2
 #define MAX_CAR_TEAM 100
 #define MAX_EQUIPAS 100
-#define DEBUG
 #define TIME_ABASTECIMENTO 2
 #define TOP_FIVE 5
 #define PIPE_NAME "named_pipe"
 #define MAX_CHAR 1024
+#define MAX 1000
+#define PIPE_NAME "named_pipe"
 
 // estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
@@ -77,6 +81,7 @@ void gestor_avarias();
 void gestor_equipa();
 void init_shm();
 void init_semaphores();
+void init_pipe();
 void *check_carros( void* id_thread);
 void terminate(int signal);
 
