@@ -91,10 +91,72 @@ void interrompe(int signal) {
     wait(NULL);
 }
 
-void gestor_corrida() {
+void gestor_corrida( ) {
+    fd_set read_set;
+    int number_of_chars;
+    char str[MAX_CHAR];
+
     #ifdef DEBUG
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
+
+    //PIPE
+    unlink(PIPE_NAME);
+    //cria o named pipe se ainda nao exite
+    if((mkfifo(PIPE_NAME, O_CREAT|O_EXCL|0600)<0) && (errno != EEXIST)){
+        perror("Cannot create pipe:");
+        exit(0);
+    }
+
+    //abrir o pipe para ler
+    int fd;
+    if((fd = open(PIPE_NAME, O_RDWR))<0){
+        perror("Cannot open pipe to read:");
+        exit(0);
+    }
+
+    //falta leitura e ver se o o pipe está aberto para ler ou escrever
+    //ler o pipe
+    while (1) {
+	
+	// I/O Multiplexing
+
+	/* TO COMPLETE */
+		FD_ZERO(&read_set);
+		FD_SET(fd, &read_set);
+		if (select(fd+1, &read_set, NULL, NULL, NULL) > 0) {
+			if(FD_ISSET(fd,&read_set)){
+				number_of_chars=read(fd, str, sizeof(str));
+				str[number_of_chars-1]='\0'; //put a \0 in the end of string
+                printf("Received \"%s\" command\n", str);
+
+				/*if(strcmp(str,"AVG TEMP")==0)
+					printf("[SERVER Received \"%s\" command]\nAverage Temperature= %.2fºC\n", str,(double)temp_sum/temp_samples);
+					else
+					if(strcmp(str,"AVG HUM")==0)
+						printf("[SERVER Received \"%s\" command]\nAverage Humidity= %.2f %%\n", str,(double)hum_sum/hum_samples);
+						else
+						if(strcmp(str,"RESET")==0){
+							printf("[SERVER received \"%s\" command]\nCounters reset!\n", str);
+							temp_sum=0;
+							temp_samples=0;
+							hum_sum=0;
+							hum_samples=0;
+							}
+							else
+							if(strcmp(str,"SHUTDOWN")==0){
+								printf("[SERVER received \"%s\" command]\nServer shutdown initiated!\n", str);
+								shutdown_all();
+								}
+								else
+								printf("[SERVER Received unknown command]: %s \n",str);*/
+			} // if(FD_ISSET(fd_named_pipe))
+		}
+
+	} // While(1)
+
+
+
     signal(SIGUSR1, interrompe);
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
@@ -210,6 +272,6 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, terminate);
     signal(SIGTSTP, print_estatisticas);
     while (1) {
-        
+        sleep(1);
     }
 }

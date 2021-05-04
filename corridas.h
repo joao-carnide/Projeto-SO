@@ -24,6 +24,8 @@
 #define DEBUG
 #define TIME_ABASTECIMENTO 2
 #define TOP_FIVE 5
+#define PIPE_NAME "named_pipe"
+#define MAX_CHAR 1024
 
 // estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
