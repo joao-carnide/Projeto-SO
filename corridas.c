@@ -123,19 +123,19 @@ void gestor_corrida( ) {
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
 
-    //PIPE
-    unlink(PIPE_NAME);
-    //cria o named pipe se ainda nao exite
-    if((mkfifo(PIPE_NAME, O_CREAT|O_EXCL|0600)<0) && (errno != EEXIST)){
-        perror("Cannot create pipe:");
-        exit(0);
-    }
-
-    //abrir o pipe para ler
-    int fd;
-    if((fd = open(PIPE_NAME, O_RDWR))<0){
-        perror("Cannot open pipe to read:");
-        exit(0);
+    signal(SIGUSR1, interrompe);
+    for (int i = 0; i < race_config->equipas; i++) {
+        pid_t childs_equipas = fork();
+        if (childs_equipas == 0) {
+            #ifdef DEBUG
+            char* str = (char*)malloc(sizeof(char)*50);
+            sprintf(str, "TEAM %d MANAGER PROCESS CREATED", i+1);
+            write_log(fp_log, str);
+            free(str);
+            #endif
+            gestor_equipa();
+            exit(0);
+        }
     }
 
     //falta leitura e ver se o o pipe está aberto para ler ou escrever
@@ -146,10 +146,10 @@ void gestor_corrida( ) {
 
 	/* TO COMPLETE */
 		FD_ZERO(&read_set);
-		FD_SET(fd, &read_set);
-		if (select(fd+1, &read_set, NULL, NULL, NULL) > 0) {
-			if(FD_ISSET(fd,&read_set)){
-				number_of_chars=read(fd, str, sizeof(str));
+		FD_SET(fd_named_pipe, &read_set);
+		if (select(fd_named_pipe+1, &read_set, NULL, NULL, NULL) > 0) {
+			if(FD_ISSET(fd_named_pipe,&read_set)){
+				number_of_chars=read(fd_named_pipe, str, sizeof(str));
 				str[number_of_chars-1]='\0'; //put a \0 in the end of string
                 printf("Received \"%s\" command\n", str);
 
@@ -179,24 +179,6 @@ void gestor_corrida( ) {
 	} // While(1)
 
 
-
-    signal(SIGUSR1, interrompe);
-    for (int i = 0; i < race_config->equipas; i++) {
-        pid_t childs_equipas = fork();
-        if (childs_equipas == 0) {
-            #ifdef DEBUG
-            char* str = (char*)malloc(sizeof(char)*50);
-            sprintf(str, "TEAM %d MANAGER PROCESS CREATED", i+1);
-            write_log(fp_log, str);
-            free(str);
-            #endif
-            gestor_equipa();
-            exit(0);
-        }
-    }
-    while (1) {
-
-    }
 }
 
 void gestor_avarias() {
