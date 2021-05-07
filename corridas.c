@@ -92,11 +92,66 @@ void write_log(FILE *fp, char* message) {
 }
 
 void wrong_command(char* cmd) {
-    char* str = (char*)malloc(sizeof(char)*MAX);
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
     sprintf(str, "WRONG COMMAND => %s", cmd);
     write_log(fp_log, str);
     free(str);
 }
+
+void start_command(char* cmd) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "NEM COMMAND RECEIVED: %s", cmd);
+    write_log(fp_log, str);
+    free(str);
+}
+
+void new_car_command(char* team, int car, int speed, float consumption, int reliability) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "NEM CAR LOADED => TEAM: %s, CAR: %2d, SPEED: %d, CONSUMPTION: %.2f, RELIABILITY: %d", team, car, speed, consumption, reliability);
+    write_log(fp_log, str);
+    free(str);
+}
+
+/* Funções para memoria partilhada---------------------------------------------------------------------------- */
+
+void load_car_to_shm(char* team, int car, int speed, float consumption, int reliability) {
+    int flag_adicionado = 0;
+    sem_wait(semaforo);
+    for (int i = 0; i < race_config->equipas; i++) {
+        if (strcmp(shared_race->equipas[i].nome_equipa, team) == 0) {
+            for (int i_car = 0; i_car < race_config->max_cars_team; i_car++) {
+                if (shared_race->equipas[i].carros[i_car].num < 100 && shared_race->equipas[i].carros[i_car].speed < 500) {
+                    shared_race->equipas[i].carros[i_car].num = car;
+                    shared_race->equipas[i].carros[i_car].speed = speed;
+                    shared_race->equipas[i].carros[i_car].consumption = consumption;
+                    shared_race->equipas[i].carros[i_car].reliability = reliability;
+                    shared_race->equipas[i].carros[i_car].n_voltas = 0;
+                    shared_race->equipas[i].carros[i_car].n_paragens = 0;
+                    flag_adicionado = 1;
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    if (flag_adicionado == 0) {
+        //TODO: encontrar team index
+    shared_race->equipas[]
+    shared_race->equipas[i].carros[i_car].num = car;
+    shared_race->equipas[i].carros[i_car].speed = speed;
+    shared_race->equipas[i].carros[i_car].consumption = consumption;
+    shared_race->equipas[i].carros[i_car].reliability = reliability;
+    shared_race->equipas[i].carros[i_car].n_voltas = 0;
+    shared_race->equipas[i].carros[i_car].n_paragens = 0;
+    break;
+    }
+    sem_post(semaforo);
+}
+
+
+
+
+
 
 /* ----------------------------------------------------------------------------------------------------------- */
 
@@ -123,7 +178,7 @@ void gestor_corrida( ) {
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
 
-    signal(SIGUSR1, interrompe);
+
     for (int i = 0; i < race_config->equipas; i++) {
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
@@ -144,7 +199,6 @@ void gestor_corrida( ) {
 	
 	// I/O Multiplexing
 
-	/* TO COMPLETE */
 		FD_ZERO(&read_set);
 		FD_SET(fd_named_pipe, &read_set);
 		if (select(fd_named_pipe+1, &read_set, NULL, NULL, NULL) > 0) {
@@ -153,29 +207,48 @@ void gestor_corrida( ) {
 				str[number_of_chars-1]='\0'; //put a \0 in the end of string
                 printf("Received \"%s\" command\n", str);
 
-				/*if(strcmp(str,"AVG TEMP")==0)
-					printf("[SERVER Received \"%s\" command]\nAverage Temperature= %.2fºC\n", str,(double)temp_sum/temp_samples);
-					else
-					if(strcmp(str,"AVG HUM")==0)
-						printf("[SERVER Received \"%s\" command]\nAverage Humidity= %.2f %%\n", str,(double)hum_sum/hum_samples);
-						else
-						if(strcmp(str,"RESET")==0){
-							printf("[SERVER received \"%s\" command]\nCounters reset!\n", str);
-							temp_sum=0;
-							temp_samples=0;
-							hum_sum=0;
-							hum_samples=0;
-							}
-							else
-							if(strcmp(str,"SHUTDOWN")==0){
-								printf("[SERVER received \"%s\" command]\nServer shutdown initiated!\n", str);
-								shutdown_all();
-								}
-								else
-								printf("[SERVER Received unknown command]: %s \n",str);*/
+                char* ptr_buffer;
+                ptr_buffer = strtok(str, "\n");
+                while (ptr_buffer != NULL){
+                    printf("cmd: %s\n", str);
+                    if (strcmp(ptr_buffer, "START RACE!") == 0) {
+                        //start race function
+                        //printf("SR: %s\n", ptr_buffer);
+                        start_command(ptr_buffer);
+
+                        //TODO: verificar se existe pelo menos 1 carro por equipa para começar
+                        
+                       
+                    } else if (strncmp(ptr_buffer, "ADDCAR", strlen("ADDCAR")) == 0) {
+                        //ptr_buffer = strtok(NULL, " ");
+                        //printf("AC: %s\n", ptr_buffer);
+                        char ptr_str_aux[MAX_CHAR];
+                        //char* ptr_buffer_args;
+                        strcpy(ptr_str_aux, ptr_buffer);
+                        char team[20];
+                        int car, speed, reliability;
+                        float consumption;
+
+                        int val = sscanf(ptr_str_aux, "ADDCAR TEAM: %s CAR: %d, SPEED: %d, CONSUMPTION: %f, RELIABILITY: %d", team, &car, &speed, &consumption, &reliability);
+                        if (val == 5) {
+                            team[strlen(team)-1] = '\0'; //takes the ',' out
+                            new_car_command(team, car, speed, consumption, reliability); //writes to log
+
+                            load_car_to_shm(); //TODO
+
+
+                        }
+                        else {
+                            wrong_command(ptr_buffer);
+                        }
+                    } else {
+                        wrong_command(ptr_buffer);
+                    }
+                    ptr_buffer = strtok(NULL, "\n"); 
+                }
+                
 			} // if(FD_ISSET(fd_named_pipe))
 		}
-
 	} // While(1)
 
 
@@ -306,9 +379,4 @@ int main(int argc, char *argv[]) {
         wait(NULL);
     }
     race_sim = getpid();
-    signal(SIGINT, terminate);
-    signal(SIGTSTP, print_estatisticas);
-    while (1) {
-        sleep(1);
-    }
 }

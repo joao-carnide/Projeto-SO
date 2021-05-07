@@ -28,8 +28,6 @@
 #define TOP_FIVE 5
 #define PIPE_NAME "named_pipe"
 #define MAX_CHAR 1024
-#define MAX 1000
-#define PIPE_NAME "named_pipe"
 
 // estrutura com as configurações do ficheiro config.txt
 typedef struct Dados {
@@ -58,13 +56,6 @@ typedef struct equipa {
     carro carros [MAX_CAR_TEAM];
 } equipa;
 
-typedef struct mem_structure {
-    equipa equipas [MAX_EQUIPAS];
-    time_t init_time;
-    int total_avarias;
-    int n_paragens;
-} mem_structure;
-
 typedef struct Estatistica {
     carro top_carros[TOP_FIVE];
     carro ultimo_carro;
@@ -72,6 +63,14 @@ typedef struct Estatistica {
     int n_paragens;
     int n_carros_pista;
 } estatisticas;
+
+typedef struct mem_structure {
+    equipa equipas [MAX_EQUIPAS];
+    time_t init_time;
+    int total_avarias;
+    int n_paragens;
+    estatisticas stats;
+} mem_structure;
 
 dados* read_config(char* fname);
 char* get_current_time();
