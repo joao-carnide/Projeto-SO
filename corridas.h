@@ -19,6 +19,7 @@
 #include <semaphore.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <sys/msg.h>
 
 #define DEBUG
 #define PROCS_INCIAIS 2
@@ -48,6 +49,7 @@ typedef struct carro {
     int reliability;
     int n_voltas;
     int n_paragens;
+    int avariado;
 } carro;
 
 typedef struct equipa {
@@ -74,6 +76,11 @@ typedef struct mem_structure {
     estatisticas stats;
 } mem_structure;
 
+typedef struct malfunction_msg {
+    long msg_type;
+    
+} mal_msg;
+
 dados* read_config(char* fname);
 char* get_current_time();
 void write_log(FILE *fp, char* message);
@@ -85,6 +92,10 @@ void init_semaphores();
 void init_pipe();
 void *check_carros( void* id_thread);
 void terminate(int signal);
+void wrong_command(char* cmd);
+void load_car_to_shm(char* team, int car, int speed, float consumption, int reliability);
+void start_command(char* cmd);
+void new_car_command(char* team, int car, int speed, float consumption, int reliability);
 
 
 #endif

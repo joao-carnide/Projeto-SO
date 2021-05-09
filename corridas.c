@@ -26,6 +26,8 @@ sigset_t set_sinais;
 
 int fd_named_pipe;
 
+int mqid;
+
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
     char buffer[20];
@@ -130,6 +132,7 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
             shared_race->equipas[i].carros[i_car].reliability = reliability;
             shared_race->equipas[i].carros[i_car].n_voltas = 0;
             shared_race->equipas[i].carros[i_car].n_paragens = 0;
+            shared_race->equipas[i].carros[i_car].avariado = 0;
             shared_race->equipas[i].size_carros++;
             flag_adicionado = 1;
             break;
@@ -143,21 +146,13 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
         shared_race->equipas[ind_eq].carros[0].reliability = reliability;
         shared_race->equipas[ind_eq].carros[0].n_voltas = 0;
         shared_race->equipas[ind_eq].carros[0].n_paragens = 0;
+        shared_race->equipas[ind_eq].carros[0].avariado = 0;
         shared_race->equipas[ind_eq].size_carros = 1;
-        shared_race->size_equipas++;
         shared_race->equipas[ind_eq].box = "livre";
+        shared_race->size_equipas++;
     }
-    
-    /*for (int i = 0; i < shared_race->size_equipas; i++) {
-        printf("team: %s\n", shared_race->equipas[i].nome_equipa);
-        for (int x = 0; x < shared_race->equipas[i].size_carros; x++) {
-            printf("car: %2d\t", shared_race->equipas[i].carros[x].num);
-        }
-    }*/
     sem_post(semaforo);
 }
-
-
 
 
 
@@ -266,6 +261,12 @@ void gestor_avarias() {
     #ifdef DEBUG
     write_log(fp_log, "MALFUNCTION MANAGER PROCESS CREATED");
     #endif
+    while (1) {
+        
+
+
+        sleep(race_config->T_Avaria * race_config->unidades_sec);
+    }
 }
 
 void gestor_equipa() {
@@ -338,6 +339,14 @@ void init_pipe() {
     }
 }
 
+void init_mq() {
+    mqid = msgget(IPC_PRIVATE, IPC_CREAT|0777);
+    if (mqid < 0) {
+        perror("Error creating message queue\n");
+        exit(1);
+    }
+}
+
 void handle_signals() {
     sigemptyset(&set_sinais);
     sigaddset(&set_sinais, SIGINT);
@@ -362,6 +371,7 @@ void terminate(int signal) {
     shmdt(shared_race);
     shmctl(shmid_race, IPC_RMID, NULL);
     unlink(PIPE_NAME);
+    msgctl(mqid, IPC_RMID, NULL);
     exit(0);
 }
 

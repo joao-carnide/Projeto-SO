@@ -13,7 +13,7 @@ Simulador de corridas
 ### Gestor de Corrida
 - [X] Criação	dos	processos	Gestores de Equipa (**META 1**)
 - [ ] Criação dos unnamed pipes
-- [ ] Ler e validar comandos lidos do named pipe
+- [X] Ler e validar comandos lidos do named pipe
 - [ ] Começar e terminar uma corrida
 - [ ] Tratar SIGUSR1 para interromper a corrida
 
