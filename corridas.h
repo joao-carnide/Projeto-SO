@@ -53,8 +53,8 @@ typedef struct carro {
 } carro;
 
 typedef struct equipa {
-    char* nome_equipa;
-    char* box;
+    char nome_equipa[MAX_CHAR];
+    char box[MAX_CHAR];
     carro carros [MAX_CAR_TEAM];
     int size_carros;
 } equipa;

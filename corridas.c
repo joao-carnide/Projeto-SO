@@ -123,34 +123,46 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
     int ind_eq = shared_race->size_equipas;
     
     for (int i = 0; i < ind_eq; i++) {
-        printf("%s %s\n", shared_race->equipas[i].nome_equipa, team);
         if (strcmp(shared_race->equipas[i].nome_equipa, team) == 0) {
-            printf("entrei na equipa\n");
-            int i_car = shared_race->equipas[i].size_carros;
-            shared_race->equipas[i].carros[i_car].num = car;
-            shared_race->equipas[i].carros[i_car].speed = speed;
-            shared_race->equipas[i].carros[i_car].consumption = consumption;
-            shared_race->equipas[i].carros[i_car].reliability = reliability;
-            shared_race->equipas[i].carros[i_car].n_voltas = 0;
-            shared_race->equipas[i].carros[i_car].n_paragens = 0;
-            shared_race->equipas[i].carros[i_car].avariado = 0;
-            shared_race->equipas[i].size_carros++;
-            flag_adicionado = 1;
-            break;
+            if (shared_race->equipas[i].size_carros < race_config->max_cars_team) {
+                int i_car = shared_race->equipas[i].size_carros;
+                shared_race->equipas[i].carros[i_car].num = car;
+                shared_race->equipas[i].carros[i_car].speed = speed;
+                shared_race->equipas[i].carros[i_car].consumption = consumption;
+                shared_race->equipas[i].carros[i_car].reliability = reliability;
+                shared_race->equipas[i].carros[i_car].n_voltas = 0;
+                shared_race->equipas[i].carros[i_car].n_paragens = 0;
+                shared_race->equipas[i].carros[i_car].avariado = 0;
+                shared_race->equipas[i].size_carros++;
+                flag_adicionado = 1;
+                new_car_command(team, car, speed, consumption, reliability); //writes to log
+                break;
+            }
+            else {
+                flag_adicionado = 1;
+                write_log(fp_log, "CANNOT ADD MORE CAR, MAX REACHED");
+                break;
+            }
         }
     }
     if (flag_adicionado == 0) {
-        shared_race->equipas[ind_eq].nome_equipa = team;
-        shared_race->equipas[ind_eq].carros[0].num = car;
-        shared_race->equipas[ind_eq].carros[0].speed = speed;
-        shared_race->equipas[ind_eq].carros[0].consumption = consumption;
-        shared_race->equipas[ind_eq].carros[0].reliability = reliability;
-        shared_race->equipas[ind_eq].carros[0].n_voltas = 0;
-        shared_race->equipas[ind_eq].carros[0].n_paragens = 0;
-        shared_race->equipas[ind_eq].carros[0].avariado = 0;
-        shared_race->equipas[ind_eq].size_carros = 1;
-        shared_race->equipas[ind_eq].box = "livre";
-        shared_race->size_equipas++;
+        if (ind_eq < race_config->equipas) {
+            strcpy(shared_race->equipas[ind_eq].nome_equipa, team);
+            shared_race->equipas[ind_eq].carros[0].num = car;
+            shared_race->equipas[ind_eq].carros[0].speed = speed;
+            shared_race->equipas[ind_eq].carros[0].consumption = consumption;
+            shared_race->equipas[ind_eq].carros[0].reliability = reliability;
+            shared_race->equipas[ind_eq].carros[0].n_voltas = 0;
+            shared_race->equipas[ind_eq].carros[0].n_paragens = 0;
+            shared_race->equipas[ind_eq].carros[0].avariado = 0;
+            shared_race->equipas[ind_eq].size_carros = 1;
+            strcpy(shared_race->equipas[ind_eq].box, "livre");
+            shared_race->size_equipas++;
+            new_car_command(team, car, speed, consumption, reliability); //writes to log
+        }
+        else {
+            write_log(fp_log, "CANNOT ADD MORE TEAMS, MAX REACHED");
+        }
     }
     sem_post(semaforo);
 }
@@ -209,18 +221,16 @@ void gestor_corrida( ) {
                 char* ptr_buffer;
                 ptr_buffer = strtok(str, "\n");
                 while (ptr_buffer != NULL){
-                    //printf("cmd: %s\n", str);
                     if (strcmp(ptr_buffer, "START RACE!") == 0) {
                         start_command(ptr_buffer);
-
-                        //TODO: verificar se existe pelo menos 1 carro por equipa para começar
-                        
-                       
+                        if (shared_race->size_equipas < race_config->equipas) {
+                            write_log(fp_log, "CANNOT START, NOT ENOUGH TEAMS");
+                        }
+                        else {
+                            //TODO: Começar a corrida
+                        }   
                     } else if (strncmp(ptr_buffer, "ADDCAR", strlen("ADDCAR")) == 0) {
-                        //ptr_buffer = strtok(NULL, " ");
-                        //printf("AC: %s\n", ptr_buffer);
                         char ptr_str_aux[MAX_CHAR];
-                        //char* ptr_buffer_args;
                         strcpy(ptr_str_aux, ptr_buffer);
                         char team[20];
                         int car, speed, reliability;
@@ -229,15 +239,8 @@ void gestor_corrida( ) {
                         int val = sscanf(ptr_str_aux, "ADDCAR TEAM: %s CAR: %d, SPEED: %d, CONSUMPTION: %f, RELIABILITY: %d", team, &car, &speed, &consumption, &reliability);
                         if (val == 5) {
                             team[strlen(team)-1] = '\0'; //takes the ',' out
-                            new_car_command(team, car, speed, consumption, reliability); //writes to log
-                            if (shared_race->size_equipas < race_config->equipas) {
-                                printf("%d\n", shared_race->size_equipas);
-                                load_car_to_shm(team,car, speed, consumption, reliability);
-                            }
-                            else {
-                                printf("cannot add more cars/teams\n");
-                            }
-
+                            load_car_to_shm(team,car, speed, consumption, reliability);
+                        
                         }
                         else {
                             wrong_command(ptr_buffer);
@@ -246,13 +249,10 @@ void gestor_corrida( ) {
                         wrong_command(ptr_buffer);
                     }
                     ptr_buffer = strtok(NULL, "\n"); 
-                }
-                
-			} // if(FD_ISSET(fd_named_pipe))
+                }   
+			}
 		}
-	} // While(1)
-
-
+	}
 }
 
 void gestor_avarias() {
