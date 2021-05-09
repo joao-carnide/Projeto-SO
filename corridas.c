@@ -102,14 +102,14 @@ void wrong_command(char* cmd) {
 
 void start_command(char* cmd) {
     char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
-    sprintf(str, "NEM COMMAND RECEIVED: %s", cmd);
+    sprintf(str, "NEW COMMAND RECEIVED: %s", cmd);
     write_log(fp_log, str);
     free(str);
 }
 
 void new_car_command(char* team, int car, int speed, float consumption, int reliability) {
     char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
-    sprintf(str, "NEM CAR LOADED => TEAM: %s, CAR: %2d, SPEED: %d, CONSUMPTION: %.2f, RELIABILITY: %d", team, car, speed, consumption, reliability);
+    sprintf(str, "NEW CAR LOADED => TEAM: %s, CAR: %2d, SPEED: %d, CONSUMPTION: %.2f, RELIABILITY: %d", team, car, speed, consumption, reliability);
     write_log(fp_log, str);
     free(str);
 }
@@ -123,6 +123,7 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
     int ind_eq = shared_race->size_equipas;
     
     for (int i = 0; i < ind_eq; i++) {
+        printf("%s %s\n", shared_race->equipas[i].nome_equipa, team);
         if (strcmp(shared_race->equipas[i].nome_equipa, team) == 0) {
             printf("entrei na equipa\n");
             int i_car = shared_race->equipas[i].size_carros;
@@ -196,28 +197,20 @@ void gestor_corrida( ) {
             exit(0);
         }
     }
-
-    //falta leitura e ver se o o pipe está aberto para ler ou escrever
-    //ler o pipe
     while (1) {
-	
-	// I/O Multiplexing
-
 		FD_ZERO(&read_set);
 		FD_SET(fd_named_pipe, &read_set);
 		if (select(fd_named_pipe+1, &read_set, NULL, NULL, NULL) > 0) {
 			if(FD_ISSET(fd_named_pipe,&read_set)){
 				number_of_chars=read(fd_named_pipe, str, sizeof(str));
 				str[number_of_chars-1]='\0'; //put a \0 in the end of string
-                printf("Received \"%s\" command\n", str);
+                //printf("Received \"%s\" command\n", str);
 
                 char* ptr_buffer;
                 ptr_buffer = strtok(str, "\n");
                 while (ptr_buffer != NULL){
-                    printf("cmd: %s\n", str);
+                    //printf("cmd: %s\n", str);
                     if (strcmp(ptr_buffer, "START RACE!") == 0) {
-                        //start race function
-                        //printf("SR: %s\n", ptr_buffer);
                         start_command(ptr_buffer);
 
                         //TODO: verificar se existe pelo menos 1 carro por equipa para começar
@@ -237,8 +230,13 @@ void gestor_corrida( ) {
                         if (val == 5) {
                             team[strlen(team)-1] = '\0'; //takes the ',' out
                             new_car_command(team, car, speed, consumption, reliability); //writes to log
-
-                            load_car_to_shm(team,car, speed, consumption, reliability);
+                            if (shared_race->size_equipas < race_config->equipas) {
+                                printf("%d\n", shared_race->size_equipas);
+                                load_car_to_shm(team,car, speed, consumption, reliability);
+                            }
+                            else {
+                                printf("cannot add more cars/teams\n");
+                            }
 
                         }
                         else {
@@ -381,6 +379,7 @@ int main(int argc, char *argv[]) {
     init_shm();
     init_semaphores();
     init_pipe();
+    init_mq();
     write_log(fp_log, "SIMULATOR STARTING");
     race_config = read_config("config.txt");
     handle_signals();
