@@ -117,34 +117,43 @@ void new_car_command(char* team, int car, int speed, float consumption, int reli
 void load_car_to_shm(char* team, int car, int speed, float consumption, int reliability) {
     int flag_adicionado = 0;
     sem_wait(semaforo);
-    for (int i = 0; i < race_config->equipas; i++) {
+
+    int ind_eq = shared_race->size_equipas;
+    
+    for (int i = 0; i < ind_eq; i++) {
         if (strcmp(shared_race->equipas[i].nome_equipa, team) == 0) {
-            for (int i_car = 0; i_car < race_config->max_cars_team; i_car++) {
-                if (shared_race->equipas[i].carros[i_car].num < 100 && shared_race->equipas[i].carros[i_car].speed < 500) {
-                    shared_race->equipas[i].carros[i_car].num = car;
-                    shared_race->equipas[i].carros[i_car].speed = speed;
-                    shared_race->equipas[i].carros[i_car].consumption = consumption;
-                    shared_race->equipas[i].carros[i_car].reliability = reliability;
-                    shared_race->equipas[i].carros[i_car].n_voltas = 0;
-                    shared_race->equipas[i].carros[i_car].n_paragens = 0;
-                    flag_adicionado = 1;
-                    break;
-                }
-            }
+            printf("entrei na equipa\n");
+            int i_car = shared_race->equipas[i].size_carros;
+            shared_race->equipas[i].carros[i_car].num = car;
+            shared_race->equipas[i].carros[i_car].speed = speed;
+            shared_race->equipas[i].carros[i_car].consumption = consumption;
+            shared_race->equipas[i].carros[i_car].reliability = reliability;
+            shared_race->equipas[i].carros[i_car].n_voltas = 0;
+            shared_race->equipas[i].carros[i_car].n_paragens = 0;
+            shared_race->equipas[i].size_carros++;
+            flag_adicionado = 1;
             break;
         }
     }
     if (flag_adicionado == 0) {
-        //TODO: encontrar team index
-    shared_race->equipas[]
-    shared_race->equipas[i].carros[i_car].num = car;
-    shared_race->equipas[i].carros[i_car].speed = speed;
-    shared_race->equipas[i].carros[i_car].consumption = consumption;
-    shared_race->equipas[i].carros[i_car].reliability = reliability;
-    shared_race->equipas[i].carros[i_car].n_voltas = 0;
-    shared_race->equipas[i].carros[i_car].n_paragens = 0;
-    break;
+        shared_race->equipas[ind_eq].nome_equipa = team;
+        shared_race->equipas[ind_eq].carros[0].num = car;
+        shared_race->equipas[ind_eq].carros[0].speed = speed;
+        shared_race->equipas[ind_eq].carros[0].consumption = consumption;
+        shared_race->equipas[ind_eq].carros[0].reliability = reliability;
+        shared_race->equipas[ind_eq].carros[0].n_voltas = 0;
+        shared_race->equipas[ind_eq].carros[0].n_paragens = 0;
+        shared_race->equipas[ind_eq].size_carros = 1;
+        shared_race->size_equipas++;
+        shared_race->equipas[ind_eq].box = "livre";
     }
+    
+    /*for (int i = 0; i < shared_race->size_equipas; i++) {
+        printf("team: %s\n", shared_race->equipas[i].nome_equipa);
+        for (int x = 0; x < shared_race->equipas[i].size_carros; x++) {
+            printf("car: %2d\t", shared_race->equipas[i].carros[x].num);
+        }
+    }*/
     sem_post(semaforo);
 }
 
@@ -234,8 +243,7 @@ void gestor_corrida( ) {
                             team[strlen(team)-1] = '\0'; //takes the ',' out
                             new_car_command(team, car, speed, consumption, reliability); //writes to log
 
-                            load_car_to_shm(); //TODO
-
+                            load_car_to_shm(team,car, speed, consumption, reliability);
 
                         }
                         else {
@@ -305,6 +313,10 @@ void init_shm() {
 		perror("Shmat race error!\n");
 		exit(1);
 	}
+
+    // initiate size vars
+    shared_race->size_equipas = 0;
+
 }
 
 void init_semaphores() {

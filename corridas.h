@@ -54,6 +54,7 @@ typedef struct equipa {
     char* nome_equipa;
     char* box;
     carro carros [MAX_CAR_TEAM];
+    int size_carros;
 } equipa;
 
 typedef struct Estatistica {
@@ -66,6 +67,7 @@ typedef struct Estatistica {
 
 typedef struct mem_structure {
     equipa equipas [MAX_EQUIPAS];
+    int size_equipas;
     time_t init_time;
     int total_avarias;
     int n_paragens;
