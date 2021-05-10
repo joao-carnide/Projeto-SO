@@ -264,27 +264,36 @@ void gestor_avarias() {
     write_log(fp_log, "MALFUNCTION MANAGER PROCESS CREATED");
     #endif
     while (1) {
+        
+
         int min = INT_MAX;
         int *ptr_flag = NULL; // serve para repor a flag a 0 caso o valor anterior em min nao seja o verdadeiro min
-        
+        sem_wait(semaforo);
         for(int t = 0; t < shared_race->size_equipas; t++) {
             for (int c = 0; c < shared_race->equipas[t].size_carros; c++) {
                 if (shared_race->equipas[t].carros[c].reliability < min && !shared_race->equipas[t].carros[c].avariado) {
                     min = shared_race->equipas[t].carros[c].reliability;
-                    shared_race->equipas[t].carros[c].avariado = 1;
-                    *ptr_flag = 0;
                     ptr_flag = &shared_race->equipas[t].carros[c].avariado;
                 }
             }
         }
+        if (ptr_flag != NULL) {
+            *ptr_flag = 1;
+        }
+        sem_post(semaforo);
 
-        mal_msg mal_message;
-        mal_message.msg_type = min;
-        if (msgsnd(mqid, &mal_message, sizeof(mal_msg), 0)) {
-            perror("Error sending message");
+        //printf("mqid = %d\n", mqid);
+        //printf("msg_type = %d\n", min);
+
+        if (min <= 100) {
+            mal_msg mal_message;
+            mal_message.msg_type = min;
+            if (msgsnd(mqid, &mal_message, sizeof(mal_msg), 0)) {
+                perror("Error sending message");
+            }
+            //printf("\nmensagem enviada para o ar\n\n");
         }
 
-        // printf("mensagem enviada para o ar\n");
         sleep(race_config->T_Avaria * race_config->unidades_sec);
     }
 }
