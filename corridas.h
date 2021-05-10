@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/msg.h>
+#include <limits.h>
 
 #define DEBUG
 #define PROCS_INCIAIS 2

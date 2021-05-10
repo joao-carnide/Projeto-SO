@@ -109,7 +109,7 @@ void start_command(char* cmd) {
 
 void new_car_command(char* team, int car, int speed, float consumption, int reliability) {
     char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
-    sprintf(str, "NEW CAR LOADED => TEAM: %s, CAR: %2d, SPEED: %d, CONSUMPTION: %.2f, RELIABILITY: %d", team, car, speed, consumption, reliability);
+    sprintf(str, "NEW CAR LOADED => TEAM: %s, CAR: %02d, SPEED: %d, CONSUMPTION: %.2f, RELIABILITY: %d", team, car, speed, consumption, reliability);
     write_log(fp_log, str);
     free(str);
 }
@@ -260,7 +260,25 @@ void gestor_avarias() {
     write_log(fp_log, "MALFUNCTION MANAGER PROCESS CREATED");
     #endif
     while (1) {
+        int min = INT_MAX;
+        int *ptr_flag = NULL; // serve para repor a flag a 0 caso o valor anterior em min nao seja o verdadeiro min
         
+        for(int t = 0; t < shared_race->size_equipas; t++) {
+            for (int c = 0; c < shared_race->equipas[t].size_carros; c++) {
+                if (shared_race->equipas[t].carros[c].reliability < min && !shared_race->equipas[t].carros[c].avariado) {
+                    min = shared_race->equipas[t].carros[c].reliability;
+                    shared_race->equipas[t].carros[c].avariado = 1;
+                    *ptr_flag = 0;
+                    ptr_flag = &shared_race->equipas[t].carros[c].avariado;
+                }
+            }
+        }
+
+        mal_msg mal_message;
+        mal_message.msg_type = min;
+        if (msgsnd(mqid, &mal_message, sizeof(mal_msg), 0)) {
+            perror("Error sending message");
+        }
 
 
         sleep(race_config->T_Avaria * race_config->unidades_sec);
@@ -305,11 +323,11 @@ void *check_carros( void* id_thread) {
 /* Funções de inicialização */
 void init_shm() {
     if ((shmid_race = shmget(IPC_PRIVATE, sizeof(mem_structure), IPC_CREAT|0766)) < 0) {
-		perror("Error in race shmget with IPC_CREAT\n");
+		perror("Error in race shmget with IPC_CREAT");
 		exit(1);
 	}
 	if ((shared_race = shmat(shmid_race, NULL, 0)) == (mem_structure*)-1) {
-		perror("Shmat race error!\n");
+		perror("Shmat race error!");
 		exit(1);
 	}
 
@@ -340,7 +358,7 @@ void init_pipe() {
 void init_mq() {
     mqid = msgget(IPC_PRIVATE, IPC_CREAT|0777);
     if (mqid < 0) {
-        perror("Error creating message queue\n");
+        perror("Error creating message queue");
         exit(1);
     }
 }
