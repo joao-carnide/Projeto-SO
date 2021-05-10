@@ -25,6 +25,7 @@ pthread_cond_t box_ocupied = PTHREAD_COND_INITIALIZER;
 sigset_t set_sinais;
 
 int fd_named_pipe;
+int fd_unnamed_pipes[MAX_EQUIPAS][2];
 
 int mqid;
 
@@ -140,7 +141,7 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
             }
             else {
                 flag_adicionado = 1;
-                write_log(fp_log, "CANNOT ADD MORE CAR, MAX REACHED");
+                write_log(fp_log, "CANNOT ADD MORE CARS, MAX REACHED");
                 break;
             }
         }
@@ -197,6 +198,8 @@ void gestor_corrida( ) {
 
 
     for (int i = 0; i < race_config->equipas; i++) {
+        pipe(fd_unnamed_pipes[i]);
+        // printf("unnamed pipe para a equipa %d criado\n", i+1);
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
             #ifdef DEBUG
@@ -217,7 +220,6 @@ void gestor_corrida( ) {
 				number_of_chars=read(fd_named_pipe, str, sizeof(str));
 				str[number_of_chars-1]='\0'; //put a \0 in the end of string
                 //printf("Received \"%s\" command\n", str);
-
                 char* ptr_buffer;
                 ptr_buffer = strtok(str, "\n");
                 while (ptr_buffer != NULL){
@@ -229,7 +231,8 @@ void gestor_corrida( ) {
                         else {
                             //TODO: Começar a corrida
                         }   
-                    } else if (strncmp(ptr_buffer, "ADDCAR", strlen("ADDCAR")) == 0) {
+                    } 
+                    else if (strncmp(ptr_buffer, "ADDCAR", strlen("ADDCAR")) == 0) {
                         char ptr_str_aux[MAX_CHAR];
                         strcpy(ptr_str_aux, ptr_buffer);
                         char team[20];
@@ -245,7 +248,8 @@ void gestor_corrida( ) {
                         else {
                             wrong_command(ptr_buffer);
                         }
-                    } else {
+                    } 
+                    else {
                         wrong_command(ptr_buffer);
                     }
                     ptr_buffer = strtok(NULL, "\n"); 
@@ -280,7 +284,7 @@ void gestor_avarias() {
             perror("Error sending message");
         }
 
-
+        // printf("mensagem enviada para o ar\n");
         sleep(race_config->T_Avaria * race_config->unidades_sec);
     }
 }
