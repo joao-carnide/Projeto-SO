@@ -301,7 +301,9 @@ void gestor_avarias() {
 void gestor_equipa() {
     for (int i = 0; i < race_config->max_cars_team; i++) {
         threads_ids[i] = i+1;
-        pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
+        int reliability = 50;
+        //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
+        pthread_create(&threads_carro[i], NULL, check_carros, &reliability);
         #ifdef DEBUG
         char* str = (char*)malloc(sizeof(char)*1024);
         sprintf(str, "CAR THREAD %d CREATED", i+1);
@@ -320,10 +322,21 @@ void gestor_equipa() {
 
 void *check_carros( void* id_thread) {
     int id = *((int *)id_thread);
+    int reliab = *((int *)id_thread); //TODO: é possível passar como argumento um array de ints???
     pthread_mutex_lock(&mutex);
     char* str = (char*)malloc(sizeof(char)*1024);
     sprintf(str, "CAR THREAD %d DOING STUFF...", id);
     write_log(fp_log, str);
+
+    printf("mqid = %d\n", mqid); //TODO: é necessário estar em shared memory???
+
+    mal_msg message;
+
+    msgrcv(mqid, &message, sizeof(message), reliab, 0);
+
+    printf("[car] reliability = %ld\n", message.msg_type);
+
+
     sleep(2);
     pthread_mutex_unlock(&mutex);
     sprintf(str, "CAR THREAD %d LEAVING...", id);
