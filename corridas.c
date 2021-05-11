@@ -413,6 +413,10 @@ void terminate(int signal) {
     shmdt(shared_race);
     shmctl(shmid_race, IPC_RMID, NULL);
     unlink(PIPE_NAME);
+    for (int i = 0; i < race_config->equipas; i++) {
+        close(fd_unnamed_pipes[i][1]);
+        close(fd_unnamed_pipes[i][0]);
+    }
     msgctl(mqid, IPC_RMID, NULL);
     exit(0);
 }
