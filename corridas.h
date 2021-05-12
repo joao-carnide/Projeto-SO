@@ -72,8 +72,6 @@ typedef struct mem_structure {
     equipa equipas [MAX_EQUIPAS];
     int size_equipas;
     time_t init_time;
-    int total_avarias;
-    int n_paragens;
     estatisticas stats;
 } mem_structure;
 

@@ -29,6 +29,8 @@ int fd_unnamed_pipes[MAX_EQUIPAS][2];
 
 int mqid;
 
+int flag_race = 0;
+
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
     char buffer[20];
@@ -170,6 +172,20 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
 
 
 
+carro encontra_carro(int num) {
+    carro carro_res;
+    sem_wait(semaforo);
+    for (int e = 0; e < shared_race->size_equipas; e++) {
+        for (int c = 0; c < shared_race->equipas[e].size_carros; c++) {
+            if (shared_race->equipas[e].carros[c].num == num) {
+                carro_res = shared_race->equipas[e].carros[c];
+            }
+        }
+    }
+    sem_post(semaforo);
+    return carro_res;
+}
+
 
 /* ----------------------------------------------------------------------------------------------------------- */
 
@@ -208,7 +224,7 @@ void gestor_corrida( ) {
             write_log(fp_log, str);
             free(str);
             #endif
-            gestor_equipa();
+            gestor_equipa(i);
             exit(0);
         }
     }
@@ -229,7 +245,15 @@ void gestor_corrida( ) {
                             write_log(fp_log, "CANNOT START, NOT ENOUGH TEAMS");
                         }
                         else {
-                            //TODO: Começar a corrida
+                            if (flag_race == 0) {
+                                //TODO: Começar a corrida
+                                flag_race = 1;
+                                printf("START RACE2\n");
+                                //start_race();
+                            }
+                            else{
+                                write_log(fp_log, "RACE ALREADY STARTED");
+                            }
                         }   
                     } 
                     else if (strncmp(ptr_buffer, "ADDCAR", strlen("ADDCAR")) == 0) {
@@ -298,18 +322,22 @@ void gestor_avarias() {
     }
 }
 
-void gestor_equipa() {
-    for (int i = 0; i < race_config->max_cars_team; i++) {
-        threads_ids[i] = i+1;
-        int reliability = 50;
-        //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
-        pthread_create(&threads_carro[i], NULL, check_carros, &reliability);
-        #ifdef DEBUG
-        char* str = (char*)malloc(sizeof(char)*1024);
-        sprintf(str, "CAR THREAD %d CREATED", i+1);
-        write_log(fp_log, str);
-        free(str);
-        #endif
+void gestor_equipa(int ind_eq) {
+    while (1){ //TODO: Espera ativa pra resolver
+        if (flag_race == 1) {
+            for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
+                threads_ids[i] = i+1;
+                int num_car = shared_race->equipas[ind_eq].carros[i].num;
+                //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
+                pthread_create(&threads_carro[i], NULL, check_carros, &num_car);
+                #ifdef DEBUG
+                char* str = (char*)malloc(sizeof(char)*1024);
+                sprintf(str, "CAR THREAD %d CREATED", i+1);
+                write_log(fp_log, str);
+                free(str);
+                #endif
+            }
+        }
     }
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[i], NULL);
@@ -320,26 +348,28 @@ void gestor_equipa() {
 
 }
 
-void *check_carros( void* id_thread) {
-    int id = *((int *)id_thread);
-    int reliab = *((int *)id_thread); //TODO: é possível passar como argumento um array de ints???
+void *check_carros( void* num_car) {
+    //int id = *((int *)id_thread);
+    int num = *((int *)num_car);
+    carro car = encontra_carro(num);
+
     pthread_mutex_lock(&mutex);
     char* str = (char*)malloc(sizeof(char)*1024);
-    sprintf(str, "CAR THREAD %d DOING STUFF...", id);
+    sprintf(str, "CAR THREAD %d DOING STUFF...", num);
     write_log(fp_log, str);
 
     printf("mqid = %d\n", mqid); //TODO: é necessário estar em shared memory???
 
     mal_msg message;
 
-    msgrcv(mqid, &message, sizeof(message), reliab, 0);
+    msgrcv(mqid, &message, sizeof(message), car.reliability, 0);
 
     printf("[car] reliability = %ld\n", message.msg_type);
 
 
     sleep(2);
     pthread_mutex_unlock(&mutex);
-    sprintf(str, "CAR THREAD %d LEAVING...", id);
+    sprintf(str, "CAR THREAD %d LEAVING...", num);
     write_log(fp_log, str);
     free(str);
     sleep(1);
