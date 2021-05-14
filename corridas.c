@@ -30,6 +30,8 @@ int fd_unnamed_pipes[MAX_EQUIPAS][2];
 int mqid;
 
 int flag_race = 0;
+pthread_mutex_t mutex_race = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cv_race = PTHREAD_COND_INITIALIZER;
 
 // Função de leitura do ficheiro config.txt
 dados* read_config(char* fname) {
@@ -248,6 +250,12 @@ void gestor_corrida( ) {
                             if (flag_race == 0) {
                                 //TODO: Começar a corrida
                                 flag_race = 1;
+                                pthread_mutex_lock(&mutex_race);
+
+                                pthread_cond_signal(&cv_race);
+                                //pthread_cond_broadcast(&cv_race);
+                                pthread_mutex_unlock(&mutex_race);
+
                                 printf("START RACE2\n");
                                 //start_race();
                             }
@@ -323,22 +331,28 @@ void gestor_avarias() {
 }
 
 void gestor_equipa(int ind_eq) {
-    while (1){ //TODO: Espera ativa pra resolver
-        if (flag_race == 1) {
-            for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
-                threads_ids[i] = i+1;
-                int num_car = shared_race->equipas[ind_eq].carros[i].num;
-                //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
-                pthread_create(&threads_carro[i], NULL, check_carros, &num_car);
-                #ifdef DEBUG
-                char* str = (char*)malloc(sizeof(char)*1024);
-                sprintf(str, "CAR THREAD %d CREATED", i+1);
-                write_log(fp_log, str);
-                free(str);
-                #endif
-            }
+    while(flag_race != 1) {
+        pthread_mutex_lock(&mutex_race);
+        pthread_cond_wait(&cv_race, &mutex_race);
+        pthread_mutex_unlock(&mutex_race);
+    }
+    
+    printf("passei a cv\n");
+    if (flag_race == 1) {
+        for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
+            threads_ids[i] = i+1;
+            int num_car = shared_race->equipas[ind_eq].carros[i].num;
+            //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
+            pthread_create(&threads_carro[i], NULL, check_carros, &num_car);
+            #ifdef DEBUG
+            char* str = (char*)malloc(sizeof(char)*1024);
+            sprintf(str, "CAR THREAD %d CREATED", i+1);
+            write_log(fp_log, str);
+            free(str);
+            #endif
         }
     }
+
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[i], NULL);
         #ifdef DEBUG
@@ -448,6 +462,8 @@ void terminate(int signal) {
         close(fd_unnamed_pipes[i][0]);
     }
     msgctl(mqid, IPC_RMID, NULL);
+    pthread_cond_destroy(&cv_race);
+    pthread_mutex_destroy(&mutex_race);
     exit(0);
 }
 

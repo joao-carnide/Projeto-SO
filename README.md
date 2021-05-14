@@ -29,7 +29,7 @@ Simulador de corridas
 - [ ] Gerir abastecimento dos carros
 
 ### Gestor de Avarias
-- [ ] Gerar avarias para os vários carros, baseado na fiabilidade de cada um
+- [1/2] Gerar avarias para os vários carros, baseado na fiabilidade de cada um
 
 ### Ficheiro de log
 - [X] Envio sincronizado do output para o ficheiro de log e ecrã (**META 1**)
@@ -41,4 +41,4 @@ Simulador de corridas
 - [ ] Deteção e tratamento de erros
 - [X] Sincronização com mecanismos adequados (semáforos, mutexes ou variáveis de condição) (**META 1 - preliminar**)
 - [ ] Prevenção de interrupções indesejadas por sinais e fornecer a resposta adequada aos vários sinais
-- [ ] Após receção de SIGINT, terminação controlada de todos os processos e threads, e libertação de todos os recursos
+- [X] Após receção de SIGINT, terminação controlada de todos os processos e threads, e libertação de todos os recursos
