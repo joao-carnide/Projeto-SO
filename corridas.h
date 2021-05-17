@@ -73,6 +73,9 @@ typedef struct mem_structure {
     int size_equipas;
     time_t init_time;
     estatisticas stats;
+    int flag_corrida;
+    pthread_mutex_t mutex_race_state;
+    pthread_cond_t cv_race_started;
 } mem_structure;
 
 typedef struct malfunction_msg {

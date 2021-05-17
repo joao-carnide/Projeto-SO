@@ -247,21 +247,18 @@ void gestor_corrida( ) {
                             write_log(fp_log, "CANNOT START, NOT ENOUGH TEAMS");
                         }
                         else {
-                            if (flag_race == 0) {
-                                //TODO: Começar a corrida
-                                flag_race = 1;
-                                pthread_mutex_lock(&mutex_race);
-
-                                pthread_cond_signal(&cv_race);
-                                //pthread_cond_broadcast(&cv_race);
-                                pthread_mutex_unlock(&mutex_race);
-
-                                printf("START RACE2\n");
-                                //start_race();
+                            sem_wait(semaforo);
+                            if (shared_race->flag_corrida == 0) {
+                                pthread_mutex_lock(&(shared_race->mutex_race_state));
+                                shared_race->flag_corrida = 1;
+                                pthread_cond_broadcast(&(shared_race->cv_race_started));
+                                pthread_mutex_unlock(&(shared_race->mutex_race_state));
+                                printf("signal\n");
                             }
                             else{
                                 write_log(fp_log, "RACE ALREADY STARTED");
                             }
+                            sem_post(semaforo);
                         }   
                     } 
                     else if (strncmp(ptr_buffer, "ADDCAR", strlen("ADDCAR")) == 0) {
@@ -296,8 +293,6 @@ void gestor_avarias() {
     write_log(fp_log, "MALFUNCTION MANAGER PROCESS CREATED");
     #endif
     while (1) {
-        
-
         int min = INT_MAX;
         int *ptr_flag = NULL; // serve para repor a flag a 0 caso o valor anterior em min nao seja o verdadeiro min
         sem_wait(semaforo);
@@ -331,14 +326,15 @@ void gestor_avarias() {
 }
 
 void gestor_equipa(int ind_eq) {
-    while(flag_race != 1) {
-        pthread_mutex_lock(&mutex_race);
-        pthread_cond_wait(&cv_race, &mutex_race);
-        pthread_mutex_unlock(&mutex_race);
+    pthread_mutex_lock(&(shared_race->mutex_race_state));
+    while(shared_race->flag_corrida != 1) {
+        pthread_cond_wait(&(shared_race->cv_race_started), &(shared_race->mutex_race_state));
     }
+    pthread_mutex_unlock(&(shared_race->mutex_race_state));
     
     printf("passei a cv\n");
-    if (flag_race == 1) {
+    sem_wait(semaforo);
+    if (shared_race->flag_corrida == 1) {
         for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
             threads_ids[i] = i+1;
             int num_car = shared_race->equipas[ind_eq].carros[i].num;
@@ -352,6 +348,7 @@ void gestor_equipa(int ind_eq) {
             #endif
         }
     }
+    sem_post(semaforo);
 
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[i], NULL);
@@ -403,6 +400,7 @@ void init_shm() {
 
     // initiate size vars
     shared_race->size_equipas = 0;
+    shared_race->flag_corrida = 0;
 
 }
 
@@ -431,6 +429,25 @@ void init_mq() {
         perror("Error creating message queue");
         exit(1);
     }
+}
+
+void init_cv_processes () {
+    pthread_mutexattr_t attrmutex; 
+    pthread_condattr_t attrcondv;
+
+    /* Initialize attribute of mutex. */
+    pthread_mutexattr_init(&attrmutex);
+    pthread_mutexattr_setpshared(&attrmutex, PTHREAD_PROCESS_SHARED);
+
+    /* Initialize attribute of condition variable. */
+    pthread_condattr_init(&attrcondv);
+    pthread_condattr_setpshared(&attrcondv, PTHREAD_PROCESS_SHARED);
+    
+    /* Initialize mutex. */
+    pthread_mutex_init(&(shared_race->mutex_race_state), &attrmutex);
+    
+    /* Initialize condition variables. */
+    pthread_cond_init(&shared_race->cv_race_started, &attrcondv);
 }
 
 void handle_signals() {
@@ -474,6 +491,7 @@ int main(int argc, char *argv[]) {
     init_semaphores();
     init_pipe();
     init_mq();
+    init_cv_processes();
     write_log(fp_log, "SIMULATOR STARTING");
     race_config = read_config("config.txt");
     handle_signals();
