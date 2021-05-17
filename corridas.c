@@ -292,6 +292,15 @@ void gestor_avarias() {
     #ifdef DEBUG
     write_log(fp_log, "MALFUNCTION MANAGER PROCESS CREATED");
     #endif
+    //start race
+    pthread_mutex_lock(&(shared_race->mutex_race_state));
+    while(shared_race->flag_corrida != 1) {
+        pthread_cond_wait(&(shared_race->cv_race_started), &(shared_race->mutex_race_state));
+    }
+    pthread_mutex_unlock(&(shared_race->mutex_race_state));
+    #ifdef DEBUG
+    printf("Começar a enviar avarias\n");
+    #endif
     while (1) {
         int min = INT_MAX;
         int *ptr_flag = NULL; // serve para repor a flag a 0 caso o valor anterior em min nao seja o verdadeiro min
@@ -331,8 +340,9 @@ void gestor_equipa(int ind_eq) {
         pthread_cond_wait(&(shared_race->cv_race_started), &(shared_race->mutex_race_state));
     }
     pthread_mutex_unlock(&(shared_race->mutex_race_state));
-    
-    printf("passei a cv\n");
+    #ifdef DEBUG
+    printf("Criar threads carro e começar a corrida\n");
+    #endif
     sem_wait(semaforo);
     if (shared_race->flag_corrida == 1) {
         for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
@@ -342,7 +352,7 @@ void gestor_equipa(int ind_eq) {
             pthread_create(&threads_carro[i], NULL, check_carros, &num_car);
             #ifdef DEBUG
             char* str = (char*)malloc(sizeof(char)*1024);
-            sprintf(str, "CAR THREAD %d CREATED", i+1);
+            sprintf(str, "CAR THREAD %d CREATED", num_car);
             write_log(fp_log, str);
             free(str);
             #endif
@@ -368,6 +378,7 @@ void *check_carros( void* num_car) {
     char* str = (char*)malloc(sizeof(char)*1024);
     sprintf(str, "CAR THREAD %d DOING STUFF...", num);
     write_log(fp_log, str);
+    free(str);
 
     printf("mqid = %d\n", mqid); //TODO: é necessário estar em shared memory???
 
@@ -380,9 +391,10 @@ void *check_carros( void* num_car) {
 
     sleep(2);
     pthread_mutex_unlock(&mutex);
-    sprintf(str, "CAR THREAD %d LEAVING...", num);
-    write_log(fp_log, str);
-    free(str);
+    char* str2 = (char*)malloc(sizeof(char)*1024);
+    sprintf(str2, "CAR THREAD %d LEAVING...", num);
+    write_log(fp_log, str2);
+    free(str2);
     sleep(1);
     pthread_exit(NULL);
 }
