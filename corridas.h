@@ -51,6 +51,7 @@ typedef struct carro {
     int n_voltas;
     int n_paragens;
     int avariado;
+    char estado[MAX_CHAR];
 } carro;
 
 typedef struct equipa {

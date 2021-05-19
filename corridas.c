@@ -195,6 +195,20 @@ carro encontra_carro(int num) {
     return carro_res;
 }
 
+void atualiza_carro(carro car) {
+    sem_wait(semaforo);
+    if (strcmp(car.estado, "corrida") == 0) {
+
+    }
+    else if (strcmp(car.estado, "seguranca") == 0) {
+
+    }
+    else if (strcmp(car.estado, "box") == 0) {
+
+    }
+    else if (strcmp(car.estado, "terminado") == 0)
+    sem_post(semaforo);
+}
 
 /* ----------------------------------------------------------------------------------------------------------- */
 
@@ -266,7 +280,7 @@ void gestor_corrida( ) {
                                 shared_race->flag_corrida = 1;
                                 int total_cars = 0;
                                 for (int i = 0; i < shared_race->size_equipas; i++) {
-                                    total_cars += shared_race->equipas[i].size_carros; 
+                                    total_cars += shared_race->equipas[i].size_carros;
                                 }
                                 shared_race->stats.n_carros_pista = total_cars;
                                 pthread_cond_broadcast(&(shared_race->cv_race_started));
@@ -355,6 +369,11 @@ void gestor_equipa(int ind_eq) {
     printf("Criar threads carro e começar a corrida\n");
     #endif
     sem_wait(semaforo);
+    for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
+        strcpy(shared_race->equipas[ind_eq].carros[i].estado, "corrida");
+    }
+    sem_post(semaforo);
+    sem_wait(semaforo);
     if (shared_race->flag_corrida == 1) {
         for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
             threads_ids[i] = i+1;
@@ -388,15 +407,26 @@ void *check_carros(void* num_car) {
     free(str);
 
     mal_msg message;
-    msgrcv(mqid, &message, sizeof(message), car.reliability, 0);
-    new_malfunction(num);
-    #ifndef DEBUG
-    printf("[car] reliability = %ld\n", message.msg_type);
-    #endif
-    sem_wait(semaforo);
-    shared_race->stats.total_avarias++;
-    sem_post(semaforo);
+    int check_msg;
+    while(1) {
+        if (strcmp(car.estado, "corrida") == 0) {
+            check_msg = msgrcv(mqid, &message, sizeof(message), car.reliability, IPC_NOWAIT);
+            if (check_msg > 0) {
+                new_malfunction(num);
+                #ifndef DEBUG
+                printf("[car] reliability = %ld\n", message.msg_type);
+                #endif
+                sem_wait(semaforo);
+                shared_race->stats.total_avarias++;
+                strcpy(car.estado, "seguranca");
+                sem_post(semaforo);
+            }
 
+        }
+        atualiza_carro(car);
+    }
+
+    
     sleep(2);
     pthread_mutex_unlock(&mutex);
     char* str2 = (char*)malloc(sizeof(char)*1024);
