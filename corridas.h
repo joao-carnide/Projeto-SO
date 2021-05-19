@@ -49,6 +49,8 @@ typedef struct carro {
     float consumption;
     int reliability;
     int n_voltas;
+    int distancia;
+    float fuel;
     int n_paragens;
     int avariado;
     char estado[MAX_CHAR];
@@ -57,6 +59,7 @@ typedef struct carro {
 typedef struct equipa {
     char nome_equipa[MAX_CHAR];
     char box[MAX_CHAR];
+    int flag_carro_box;
     carro carros [MAX_CAR_TEAM];
     int size_carros;
 } equipa;
