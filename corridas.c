@@ -119,6 +119,13 @@ void new_car_command(char* team, int car, int speed, float consumption, int reli
     free(str);
 }
 
+void new_malfunction(int car_num) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "NEW PROBLEM IN CAR %02d", car_num);
+    write_log(fp_log, str);
+    free(str);
+}
+
 /* Funções para memoria partilhada---------------------------------------------------------------------------- */
 
 void load_car_to_shm(char* team, int car, int speed, float consumption, int reliability) {
@@ -195,6 +202,17 @@ carro encontra_carro(int num) {
 void print_estatisticas(int signal) {
     if (getpid() == race_sim) {
         write_log(fp_log, "SIGNAL SIGTSTP RECEIVED");
+        printf("-----------------STATISTICS-----------------\n");
+        sem_wait(semaforo);
+        printf("TOP 5 CARS\n");
+        //TODO
+        printf("CAR THAT FINISHED IN LAST PLACE\n");
+        //TODO
+        printf("TOTAL NUMBER OF MALFUNCIONS: %d\n", shared_race->stats.total_avarias);
+        printf("TOTAL NUMBER OF REFUELLING: %d\n", shared_race->stats.num_paragens);
+        printf("NUMBER OF CARS ON THE TRACK: %d\n", shared_race->stats.n_carros_pista);
+        sem_post(semaforo);
+        printf("--------------------------------------------\n");
     }
 }
 
@@ -209,15 +227,11 @@ void gestor_corrida( ) {
     fd_set read_set;
     int number_of_chars;
     char str[MAX_CHAR];
-
     #ifdef DEBUG
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
-
-
     for (int i = 0; i < race_config->equipas; i++) {
         pipe(fd_unnamed_pipes[i]);
-        // printf("unnamed pipe para a equipa %d criado\n", i+1);
         pid_t childs_equipas = fork();
         if (childs_equipas == 0) {
             #ifdef DEBUG
@@ -237,7 +251,6 @@ void gestor_corrida( ) {
 			if(FD_ISSET(fd_named_pipe,&read_set)){
 				number_of_chars=read(fd_named_pipe, str, sizeof(str));
 				str[number_of_chars-1]='\0'; //put a \0 in the end of string
-                //printf("Received \"%s\" command\n", str);
                 char* ptr_buffer;
                 ptr_buffer = strtok(str, "\n");
                 while (ptr_buffer != NULL){
@@ -251,9 +264,13 @@ void gestor_corrida( ) {
                             if (shared_race->flag_corrida == 0) {
                                 pthread_mutex_lock(&(shared_race->mutex_race_state));
                                 shared_race->flag_corrida = 1;
+                                int total_cars = 0;
+                                for (int i = 0; i < shared_race->size_equipas; i++) {
+                                    total_cars += shared_race->equipas[i].size_carros; 
+                                }
+                                shared_race->stats.n_carros_pista = total_cars;
                                 pthread_cond_broadcast(&(shared_race->cv_race_started));
                                 pthread_mutex_unlock(&(shared_race->mutex_race_state));
-                                printf("signal\n");
                             }
                             else{
                                 write_log(fp_log, "RACE ALREADY STARTED");
@@ -272,7 +289,6 @@ void gestor_corrida( ) {
                         if (val == 5) {
                             team[strlen(team)-1] = '\0'; //takes the ',' out
                             load_car_to_shm(team,car, speed, consumption, reliability);
-                        
                         }
                         else {
                             wrong_command(ptr_buffer);
@@ -302,6 +318,7 @@ void gestor_avarias() {
     printf("Começar a enviar avarias\n");
     #endif
     while (1) {
+        sleep(race_config->T_Avaria * race_config->unidades_sec);
         int min = INT_MAX;
         int *ptr_flag = NULL; // serve para repor a flag a 0 caso o valor anterior em min nao seja o verdadeiro min
         sem_wait(semaforo);
@@ -318,19 +335,13 @@ void gestor_avarias() {
         }
         sem_post(semaforo);
 
-        //printf("mqid = %d\n", mqid);
-        //printf("msg_type = %d\n", min);
-
         if (min <= 100) {
             mal_msg mal_message;
             mal_message.msg_type = min;
             if (msgsnd(mqid, &mal_message, sizeof(mal_msg), 0)) {
                 perror("Error sending message");
             }
-            //printf("\nmensagem enviada para o ar\n\n");
         }
-
-        sleep(race_config->T_Avaria * race_config->unidades_sec);
     }
 }
 
@@ -362,15 +373,11 @@ void gestor_equipa(int ind_eq) {
 
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[i], NULL);
-        #ifdef DEBUG
-		//printf("Thread carro %d joined\n", i+1);
-        #endif
     }
 
 }
 
-void *check_carros( void* num_car) {
-    //int id = *((int *)id_thread);
+void *check_carros(void* num_car) {
     int num = *((int *)num_car);
     carro car = encontra_carro(num);
 
@@ -380,14 +387,15 @@ void *check_carros( void* num_car) {
     write_log(fp_log, str);
     free(str);
 
-    printf("mqid = %d\n", mqid); //TODO: é necessário estar em shared memory???
-
     mal_msg message;
-
     msgrcv(mqid, &message, sizeof(message), car.reliability, 0);
-
+    new_malfunction(num);
+    #ifndef DEBUG
     printf("[car] reliability = %ld\n", message.msg_type);
-
+    #endif
+    sem_wait(semaforo);
+    shared_race->stats.total_avarias++;
+    sem_post(semaforo);
 
     sleep(2);
     pthread_mutex_unlock(&mutex);
@@ -413,7 +421,9 @@ void init_shm() {
     // initiate size vars
     shared_race->size_equipas = 0;
     shared_race->flag_corrida = 0;
-
+    shared_race->stats.num_paragens = 0;
+    shared_race->stats.total_avarias = 0;
+    shared_race->stats.n_carros_pista = 0;
 }
 
 void init_semaphores() {
@@ -447,18 +457,13 @@ void init_cv_processes () {
     pthread_mutexattr_t attrmutex; 
     pthread_condattr_t attrcondv;
 
-    /* Initialize attribute of mutex. */
     pthread_mutexattr_init(&attrmutex);
     pthread_mutexattr_setpshared(&attrmutex, PTHREAD_PROCESS_SHARED);
 
-    /* Initialize attribute of condition variable. */
     pthread_condattr_init(&attrcondv);
     pthread_condattr_setpshared(&attrcondv, PTHREAD_PROCESS_SHARED);
     
-    /* Initialize mutex. */
     pthread_mutex_init(&(shared_race->mutex_race_state), &attrmutex);
-    
-    /* Initialize condition variables. */
     pthread_cond_init(&shared_race->cv_race_started, &attrcondv);
 }
 

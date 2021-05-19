@@ -63,8 +63,8 @@ typedef struct equipa {
 typedef struct Estatistica {
     carro top_carros[TOP_FIVE];
     carro ultimo_carro;
-    int t_avarias;
-    int n_paragens;
+    int total_avarias;
+    int num_paragens;
     int n_carros_pista;
 } estatisticas;
 
@@ -98,6 +98,7 @@ void wrong_command(char* cmd);
 void load_car_to_shm(char* team, int car, int speed, float consumption, int reliability);
 void start_command(char* cmd);
 void new_car_command(char* team, int car, int speed, float consumption, int reliability);
+void new_malfunction(int car_num);
 
 
 #endif
