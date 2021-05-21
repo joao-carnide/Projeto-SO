@@ -218,28 +218,61 @@ equipa encontra_equipa(int num_car) {
 int atualiza_carro(carro car) {
     equipa eq_car = encontra_equipa(car.num);
     sem_wait(semaforo);
-    if (strcmp(car.estado, "corrida") == 0) {
-        car.distancia += car.speed;
-        car.fuel -= car.consumption;
-        if (car.distancia > race_config->d_volta) {
+    //TODO: falta escrever todas as alterações para o unnamed pipe
+    if (strcmp(car.estado, "corrida") == 0 || strcmp(car.estado, "seguranca") == 0) {
+        //comum ao estado corrida e segurança
+        if (car.distancia + car.speed >= race_config->d_volta || eq_car.flag_carro_box == car.num) {
+            strcpy(car.estado, "box");
+        }
+
+        if (car.distancia >= race_config->d_volta) {
             car.distancia -= race_config->d_volta;
             car.n_voltas += 1;
         }
-        if (car.fuel < 4 * car.consumption * (race_config->d_volta/car.speed)) {
-            //TODO: verificar estado da box
-
+    }
+    if (strcmp(car.estado, "corrida") == 0) {
+        car.distancia += car.speed;
+        car.fuel -= car.consumption;
+        if (car.fuel <= 0) { // nao deve ser preciso pq neste momento o carro já está em modo de segurança
+            strcpy(car.estado, "desistencia");
         }
-        if (car.fuel < 2 * car.consumption * (race_config->d_volta/car.speed)) {
-            strcpy(car.estado, "seguranca"); //TODO: verificar o estado da box
+        else if (car.fuel < 2 * car.consumption * (race_config->d_volta/car.speed)) {
+            strcpy(car.estado, "seguranca");
+            if (strcmp(eq_car.box, "livre") == 0 && eq_car.flag_carro_box != car.num) {
+                strcpy(eq_car.box, "reservado");
+                eq_car.flag_carro_box = car.num; //guarda na equipa o número do carro que reservou a boxpassword
+            }
+        }
+        else if (car.fuel < 4 * car.consumption * (race_config->d_volta/car.speed)) {
+            //TODO: verificar estado da box
+            if (strcmp(eq_car.box, "livre") == 0 && eq_car.flag_carro_box != car.num) {
+                strcpy(eq_car.box, "reservado");
+                eq_car.flag_carro_box = car.num; //guarda na equipa o número do carro que reservou a boxpassword
+            }
+        }
+        if (car.n_voltas == race_config->n_voltas) {
+            strcpy(car.estado, "terminado");
         }
     }
     else if (strcmp(car.estado, "seguranca") == 0) {
         car.distancia += 0.3 * car.speed;
         car.fuel -= 0.4 * car.consumption;
+        if (car.fuel <= 0) {
+            strcpy(car.estado, "desistencia");
+        }
+        if (car.n_voltas == race_config->n_voltas) {
+            strcpy(car.estado, "terminado");
+        }
     }
     else if (strcmp(car.estado, "box") == 0) {
-        strcpy(eq_car.box, "reservado");
-        eq_car.
+        //TODO: tratar de sincronizar o gestor de equipa com a thread que entra na box
+        strcpy(eq_car.box, "ocupada");
+        // TODO: o sleep da box pode estar aqui??? Ou tem de ser no processo gestor equipa?
+        sleep(race_config->T_Box_Max); //WARNING: falta o random
+        strcpy(eq_car.box, "livre");
+        eq_car.flag_carro_box = 0;
+        car.distancia = 0;
+        car.n_voltas++;
     }
     else if (strcmp(car.estado, "terminado") == 0) {
         //TODO: logs
@@ -378,20 +411,23 @@ void gestor_avarias() {
     #endif
     while (1) {
         sleep(race_config->T_Avaria * race_config->unidades_sec);
-        int min = INT_MAX;
-        int *ptr_flag = NULL; // serve para repor a flag a 0 caso o valor anterior em min nao seja o verdadeiro min
+        int min = INT_MAX, min_team_ind = -1, min_car_ind = -1;
+        //int *ptr_flag = NULL; // Serve para só por a flag avariado = 1 apenas no carro com a menor reliability restante
         sem_wait(semaforo);
         for(int t = 0; t < shared_race->size_equipas; t++) {
             for (int c = 0; c < shared_race->equipas[t].size_carros; c++) {
                 if (shared_race->equipas[t].carros[c].reliability < min && !shared_race->equipas[t].carros[c].avariado) {
                     min = shared_race->equipas[t].carros[c].reliability;
-                    ptr_flag = &shared_race->equipas[t].carros[c].avariado;
+                    //ptr_flag = &shared_race->equipas[t].carros[c].avariado;
+                    min_team_ind = t;
+                    min_car_ind = c;
                 }
             }
         }
-        if (ptr_flag != NULL) {
+        /*if (ptr_flag != NULL) {
             *ptr_flag = 1;
-        }
+        }*/
+        shared_race->equipas[min_team_ind].carros[min_car_ind].avariado = 1;
         sem_post(semaforo);
 
         if (min <= 100) {
@@ -401,6 +437,11 @@ void gestor_avarias() {
                 perror("Error sending message");
             }
         }
+        //reset min vars
+        min = INT_MAX;
+        min_team_ind = -1;
+        min_car_ind = -1;
+
     }
 }
 
@@ -444,6 +485,7 @@ void gestor_equipa(int ind_eq) {
 void *check_carros(void* num_car) {
     int num = *((int *)num_car);
     carro car = encontra_carro(num);
+    equipa equipa = encontra_equipa(num);
 
     pthread_mutex_lock(&mutex);
     char* str = (char*)malloc(sizeof(char)*1024);
@@ -468,12 +510,16 @@ void *check_carros(void* num_car) {
         }
 
         check_estado = atualiza_carro(car);
-        if (check_estado == )
+        if (check_estado > 0) {
+
+        }
+        if (equipa.flag_carro_box == num) {
+            //TODO: entrar na box
+        }
         sleep(race_config->unidades_sec);
     }
 
     
-    sleep(2);
     pthread_mutex_unlock(&mutex);
     char* str2 = (char*)malloc(sizeof(char)*1024);
     sprintf(str2, "CAR THREAD %d LEAVING...", num);
