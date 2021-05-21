@@ -126,6 +126,20 @@ void new_malfunction(int car_num) {
     free(str);
 }
 
+void finished_race(int car_num) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "CAR %02d FINISHED THE RACE", car_num);
+    write_log(fp_log, str);
+    free(str);
+}
+
+void quit_race(int car_num) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "CAR %02d GAVE UP THE RACE", car_num);
+    write_log(fp_log, str);
+    free(str);
+}
+
 /* Funções para memoria partilhada---------------------------------------------------------------------------- */
 
 void load_car_to_shm(char* team, int car, int speed, float consumption, int reliability) {
@@ -268,19 +282,21 @@ int atualiza_carro(carro car) {
         //TODO: tratar de sincronizar o gestor de equipa com a thread que entra na box
         strcpy(eq_car.box, "ocupada");
         // TODO: o sleep da box pode estar aqui??? Ou tem de ser no processo gestor equipa?
-        sleep(race_config->T_Box_Max); //WARNING: falta o random
+        sleep(rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min); // random entre T_Box_min e T_Box_Max
         strcpy(eq_car.box, "livre");
         eq_car.flag_carro_box = 0;
         car.distancia = 0;
         car.n_voltas++;
     }
     else if (strcmp(car.estado, "terminado") == 0) {
-        //TODO: logs
+        finished_race(car.num);
+        shared_race->stats.n_carros_pista--;
         sem_post(semaforo);
         return 1;
     }
     else if (strcmp(car.estado, "desistencia") == 0) {
-        //TODO: logs
+        quit_race(car.num);
+        shared_race->stats.n_carros_pista--;
         sem_post(semaforo);
         return -1;
     }
