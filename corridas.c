@@ -230,21 +230,21 @@ equipa encontra_equipa(int num_car) {
 
 int encontra_ind_carro (int num_car) {
     int ind_carro_aux;
-    sem_wait(semaforo);
+    //sem_wait(semaforo);
     int ind_eq = encontra_ind_equipa(num_car);
     for (int c = 0; c < shared_race->equipas[ind_eq].size_carros; c++) {
         if (shared_race->equipas[ind_eq].carros[c].num == num_car) {
             ind_carro_aux = c;
         }
     }
-    sem_post(semaforo);
+    //sem_post(semaforo);
     return ind_carro_aux;
 }
 
 int encontra_ind_equipa (int num_car) {
     int ind_eq_aux;
     printf("antes\n");
-    sem_wait(semaforo);
+    //sem_wait(semaforo);
     printf("depois\n");
     for (int i = 0; i<shared_race->size_equipas; i++) {
         for (int c = 0; c < shared_race->equipas[i].size_carros; c++) {
@@ -254,14 +254,14 @@ int encontra_ind_equipa (int num_car) {
             }
         }
     }
-    sem_post(semaforo);
+    //sem_post(semaforo);
     return ind_eq_aux;
 }
 
 int atualiza_carro(int num) {
+    sem_wait(semaforo);
     int ind_eq = encontra_ind_equipa(num);
     int ind_car = encontra_ind_carro(num);
-    sem_wait(semaforo);
     //TODO: falta escrever todas as alterações para o unnamed pipe
     if (strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "corrida") == 0 || strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "seguranca") == 0) {
         //comum ao estado corrida e segurança
@@ -476,10 +476,12 @@ void gestor_avarias() {
         /*if (ptr_flag != NULL) {
             *ptr_flag = 1;
         }*/
-        if (min_team_ind >= 0 && min_car_ind >= 0) {
+        shared_race->equipas[min_team_ind].carros[min_car_ind].avariado = 1;
+        sem_post(semaforo);
+        /*if (min_team_ind >= 0 && min_car_ind >= 0) {
             shared_race->equipas[min_team_ind].carros[min_car_ind].avariado = 1;
             sem_post(semaforo);
-        }
+        }*/
 
         if (min <= 100) {
             mal_msg mal_message;
@@ -518,7 +520,7 @@ void gestor_equipa(int ind_eq) {
         for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
             threads_ids[i] = i+1;
             int num_car = shared_race->equipas[ind_eq].carros[i].num;
-            sem_post(semaforo);
+            //sem_post(semaforo);
             //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
             pthread_create(&threads_carro[ind_eq * race_config->max_cars_team + i], NULL, check_carros, &num_car);
             #ifdef DEBUG
@@ -527,7 +529,7 @@ void gestor_equipa(int ind_eq) {
             write_log(fp_log, str);
             free(str);
             #endif
-            sem_wait(semaforo);
+            //sem_wait(semaforo);
         }
         pthread_mutex_lock(&mutex_equipas[ind_eq]);
         while (strcmp(shared_race->equipas[ind_eq].box, "livre") == 0) {
@@ -584,12 +586,12 @@ void *check_carros(void* num_car) {
             #ifndef DEBUG
             printf("[car] reliability = %ld\n", message.msg_type);
             #endif
-            sem_wait(semaforo);
+            //sem_wait(semaforo);
             shared_race->stats.total_avarias++;
             strcpy(shared_race->equipas[ind_eq].carros[ind_car].estado, "seguranca");
-            sem_post(semaforo);
+            //sem_post(semaforo);
         }
-
+        sem_post(semaforo);
         check_estado = atualiza_carro(num);
         if (check_estado > 0) {
             //TODO: tratar de terminar a thread em caso de desistencia ou terminado
@@ -693,10 +695,6 @@ void terminate(int signal) {
         write_log(fp_log, "SIMULATOR CLOSING");
     }
     fclose(fp_log);
-    sem_wait(semaforo);
-    pthread_mutex_destroy(&(shared_race->mutex_race_state));
-    pthread_cond_destroy(&(shared_race->cv_race_started));
-    sem_post(semaforo);
     sem_close(semaforo);
     sem_unlink("ACESSO");
     sem_close(sem_log);
