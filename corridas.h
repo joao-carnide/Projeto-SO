@@ -103,6 +103,9 @@ void load_car_to_shm(char* team, int car, int speed, float consumption, int reli
 void start_command(char* cmd);
 void new_car_command(char* team, int car, int speed, float consumption, int reliability);
 void new_malfunction(int car_num);
+int encontra_ind_carro (int num_car);
+int encontra_ind_equipa (int num_car);
+void gerir_box(int ind_eq);
 
 
 #endif
