@@ -115,8 +115,6 @@ void ordena_carros();
 void swap(int *xp, int *yp);
 void bubbleSortDistancia(int arr[], int n);
 void bubbleSortVoltas(int arr[], int n);
-
-
-
+int check_carro_num(int car);
 
 #endif
