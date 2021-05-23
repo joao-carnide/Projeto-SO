@@ -22,7 +22,7 @@
 #include <sys/msg.h>
 #include <limits.h>
 
-#define DEBUG
+#define DEBUG 1
 #define PROCS_INCIAIS 2
 #define MAX_CAR_TEAM 100
 #define MAX_EQUIPAS 100
@@ -80,6 +80,11 @@ typedef struct mem_structure {
     int flag_corrida;
     pthread_mutex_t mutex_race_state;
     pthread_cond_t cv_race_started;
+    int total_cars_finished;
+    int tabela_posicoes[MAX_CAR_TEAM * MAX_EQUIPAS];
+    int size_tabela_posicoes;
+    int tabela_posicoes_finais[MAX_CAR_TEAM * MAX_EQUIPAS];
+    int size_tabela_posicoes_finais;
 } mem_structure;
 
 typedef struct malfunction_msg {
@@ -106,6 +111,12 @@ void new_malfunction(int car_num);
 int encontra_ind_carro (int num_car);
 int encontra_ind_equipa (int num_car);
 void gerir_box(int ind_eq);
+void ordena_carros();
+void swap(int *xp, int *yp);
+void bubbleSortDistancia(int arr[], int n);
+void bubbleSortVoltas(int arr[], int n);
+
+
 
 
 #endif

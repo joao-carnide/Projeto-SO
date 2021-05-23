@@ -7,8 +7,8 @@ Simulador de corridas
 - [X] Criação	do processo	Gestor de	Corrida	e	Gestor de	Avarias (**META 1**)
 - [X] Criação	da memória partilhada (**META 1**)
 - [X] Criação	do named	pipe
-- [ ] Escrever a informação	estatística	no ecrã como resposta	ao sinal SIGTSTP
-- [ ] Captura	o	sinal	SIGINT, termina	a	corrida e	liberta	os recursos
+- [X] Escrever a informação	estatística	no ecrã como resposta	ao sinal SIGTSTP
+- [X] Captura	o	sinal	SIGINT, termina	a	corrida e	liberta	os recursos
 
 ### Gestor de Corrida
 - [X] Criação	dos	processos	Gestores de Equipa (**META 1**)
@@ -18,18 +18,18 @@ Simulador de corridas
 - [ ] Tratar SIGUSR1 para interromper a corrida
 
 ### Threads Carro
-- [ ] Atualizar SHM com as suas informações
-- [ ] Gerir os vários estados de cada carro (corrida, segurança, box, desistência e terminado)
-- [ ] Lerem as avarias da MSQ e responderem adequadamente
+- [X] Atualizar SHM com as suas informações
+- [X] Gerir os vários estados de cada carro (corrida, segurança, box, desistência e terminado)
+- [X] Lerem as avarias da MSQ e responderem adequadamente
 - [ ] Notificar o Gestor de Corrida através dos unnamed pipes
 
 ### Gestor de Equipa
 - [X] Criar threads carro (**META 1 - preliminar**)
-- [ ] Gerir box
-- [ ] Gerir abastecimento dos carros
+- [X] Gerir box
+- [X] Gerir abastecimento dos carros
 
 ### Gestor de Avarias
-- [1/2] Gerar avarias para os vários carros, baseado na fiabilidade de cada um
+- [X] Gerar avarias para os vários carros, baseado na fiabilidade de cada um
 
 ### Ficheiro de log
 - [X] Envio sincronizado do output para o ficheiro de log e ecrã (**META 1**)

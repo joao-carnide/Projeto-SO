@@ -27,6 +27,8 @@ sigset_t set_sinais;
 
 int fd_named_pipe;
 int fd_unnamed_pipes[MAX_EQUIPAS][2];
+int num_car_unnamed_pipe;
+struct timeval timeout;
 
 int mqid;
 
@@ -134,6 +136,20 @@ void finished_race(int car_num) {
 void quit_race(int car_num) {
     char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
     sprintf(str, "CAR %02d GAVE UP THE RACE", car_num);
+    write_log(fp_log, str);
+    free(str);
+}
+
+void car_in_box(int car_num) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "CAR %02d ARRIVED AT BOX FOR REPAIRING", car_num);
+    write_log(fp_log, str);
+    free(str);
+}
+
+void car_leave_box(int car_num) {
+    char* str = (char*)malloc(sizeof(char)*MAX_CHAR);
+    sprintf(str, "CAR %02d LEFT THE BOX", car_num);
     write_log(fp_log, str);
     free(str);
 }
@@ -262,14 +278,11 @@ int atualiza_carro(int num) {
     //TODO: falta escrever todas as alterações para o unnamed pipe
     if (strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "corrida") == 0 || strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "seguranca") == 0) {
         //comum ao estado corrida e segurança
-        printf("[car %d] estado = %s\tdistancia = %d\n", num, shared_race->equipas[ind_eq].carros[ind_car].estado, shared_race->equipas[ind_eq].carros[ind_car].distancia);
-        printf("[equipa %s] flag = %d\n", shared_race->equipas[ind_eq].nome_equipa, shared_race->equipas[ind_eq].flag_carro_box);
         if (shared_race->equipas[ind_eq].carros[ind_car].distancia + shared_race->equipas[ind_eq].carros[ind_car].speed >= race_config->d_volta && shared_race->equipas[ind_eq].flag_carro_box == shared_race->equipas[ind_eq].carros[ind_car].num) {
             pthread_mutex_lock(&mutex_equipas[ind_eq]);
             strcpy(shared_race->equipas[ind_eq].carros[ind_car].estado, "box");
             strcpy(shared_race->equipas[ind_eq].box, "ocupada");
-            printf("coninha\n");
-            pthread_cond_broadcast(&box_ocupied[ind_eq]);
+            pthread_cond_signal(&box_ocupied[ind_eq]);
             pthread_mutex_unlock(&mutex_equipas[ind_eq]);
         }
 
@@ -313,9 +326,7 @@ int atualiza_carro(int num) {
         }
     }
     else if (strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "box") == 0) {
-        //TODO: tratar de sincronizar o gestor de equipa com a thread que entra na box
         strcpy(shared_race->equipas[ind_eq].box, "ocupada");
-        // TODO: o sleep da box pode estar aqui??? Ou tem de ser no processo gestor equipa?
         sleep(rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min); // random entre T_Box_min e T_Box_Max
         strcpy(shared_race->equipas[ind_eq].box, "livre");
         shared_race->equipas[ind_eq].flag_carro_box = 0;
@@ -325,12 +336,14 @@ int atualiza_carro(int num) {
     else if (strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "terminado") == 0) {
         finished_race(shared_race->equipas[ind_eq].carros[ind_car].num);
         shared_race->stats.n_carros_pista--;
+        shared_race->total_cars_finished++;
         sem_post(semaforo);
         return 1;
     }
     else if (strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "desistencia") == 0) {
         quit_race(shared_race->equipas[ind_eq].carros[ind_car].num);
         shared_race->stats.n_carros_pista--;
+        shared_race->total_cars_finished++;
         sem_post(semaforo);
         return -1;
     }
@@ -346,10 +359,7 @@ void print_estatisticas(int signal) {
         write_log(fp_log, "SIGNAL SIGTSTP RECEIVED");
         printf("-----------------STATISTICS-----------------\n");
         sem_wait(semaforo);
-        printf("TOP 5 CARS\n");
-        //TODO
-        printf("CAR THAT FINISHED IN LAST PLACE\n");
-        //TODO
+        ordena_carros();
         printf("TOTAL NUMBER OF MALFUNCIONS: %d\n", shared_race->stats.total_avarias);
         printf("TOTAL NUMBER OF REFUELLING: %d\n", shared_race->stats.num_paragens);
         printf("NUMBER OF CARS ON THE TRACK: %d\n", shared_race->stats.n_carros_pista);
@@ -358,17 +368,111 @@ void print_estatisticas(int signal) {
     }
 }
 
+void print_estatisticas_final() {
+    printf("-----------FINAL STATISTICS-----------------\n");
+    sem_wait(semaforo);
+    for (int i = 0; i < shared_race->size_tabela_posicoes_finais; i++) {
+        printf("%d.\t%d\n", i+1, shared_race->tabela_posicoes_finais[i]);
+    }
+    printf("TOTAL NUMBER OF MALFUNCIONS: %d\n", shared_race->stats.total_avarias);
+    printf("TOTAL NUMBER OF REFUELLING: %d\n", shared_race->stats.num_paragens);
+    printf("NUMBER OF CARS ON THE TRACK: %d\n", shared_race->stats.n_carros_pista);
+    sem_post(semaforo);
+    printf("--------------------------------------------\n");
+}
+
+void ordena_carros() {
+    printf("TOP 5 CARS\n");
+    int k = 0;
+    for (int e = 0; e < shared_race->size_equipas; e++) {
+        for (int c = 0; c < shared_race->equipas[e].size_carros; c++) {
+            shared_race->tabela_posicoes[k++] = shared_race->equipas[e].carros[c].num;
+        }
+    }
+    shared_race->size_tabela_posicoes = k;
+
+    bubbleSortDistancia(shared_race->tabela_posicoes, shared_race->size_tabela_posicoes);
+
+    bubbleSortVoltas(shared_race->tabela_posicoes, shared_race->size_tabela_posicoes);
+
+    printf("RANK\tNUM\tEQUIPA\tVOLTAS\tPARAGENS\n");
+
+    for (int k = 0; k < shared_race->size_tabela_posicoes; k++) {
+        int ind_eq = encontra_ind_equipa(shared_race->tabela_posicoes[k]);
+        int ind_car = encontra_ind_carro(shared_race->tabela_posicoes[k]);
+
+        printf("%d.\t%d\t%s\t%d\t%d\n", k+1, shared_race->equipas[ind_eq].carros[ind_car].num, shared_race->equipas[ind_eq].nome_equipa, shared_race->equipas[ind_eq].carros[ind_car].n_voltas, shared_race->equipas[ind_eq].carros[ind_car].n_paragens);
+    }
+    //ultimo
+    printf("CAR IN LAST PLACE\n");
+    int num_ultimo_pos = shared_race->tabela_posicoes[shared_race->size_tabela_posicoes-1];
+    int ind_eq = encontra_ind_equipa(num_ultimo_pos);
+    int ind_car = encontra_ind_carro(num_ultimo_pos);
+
+    printf("%d.\t%d\t%s\t%d\t%d\n", shared_race->size_tabela_posicoes, shared_race->equipas[ind_eq].carros[ind_car].num, shared_race->equipas[ind_eq].nome_equipa, shared_race->equipas[ind_eq].carros[ind_car].n_voltas, shared_race->equipas[ind_eq].carros[ind_car].n_paragens);
+}
+
+void swap(int *xp, int *yp)
+{
+    int temp = *xp;
+    *xp = *yp;
+    *yp = temp;
+}
+
+void bubbleSortDistancia(int arr[], int n)
+{
+   int i, j;
+   int ind_eq1 = -1, ind_eq2 = -1;
+   int ind_car1 = -1, ind_car2 = -1;
+   for (i = 0; i < n-1; i++)     
+ 
+    // Last i elements are already in place  
+    for (j = 0; j < n-i-1; j++){
+        ind_eq1 = encontra_ind_equipa(arr[j]);
+        ind_car1 = encontra_ind_carro(arr[j]);
+        ind_eq2 = encontra_ind_equipa(arr[j+1]);
+        ind_car2 = encontra_ind_carro(arr[j+1]);
+
+        if (shared_race->equipas[ind_eq1].carros[ind_car1].distancia < shared_race->equipas[ind_eq2].carros[ind_car2].distancia)
+            swap(&arr[j], &arr[j+1]);
+    }
+}
+
+void bubbleSortVoltas(int arr[], int n)
+{
+   int i, j;
+   int ind_eq1 = -1, ind_eq2 = -1;
+   int ind_car1 = -1, ind_car2 = -1;
+   for (i = 0; i < n-1; i++)     
+ 
+    // Last i elements are already in place  
+    for (j = 0; j < n-i-1; j++){
+        ind_eq1 = encontra_ind_equipa(arr[j]);
+        ind_car1 = encontra_ind_carro(arr[j]);
+        ind_eq2 = encontra_ind_equipa(arr[j+1]);
+        ind_car2 = encontra_ind_carro(arr[j+1]);
+
+        if (shared_race->equipas[ind_eq1].carros[ind_car1].n_voltas < shared_race->equipas[ind_eq2].carros[ind_car2].n_voltas)
+            swap(&arr[j], &arr[j+1]);
+    }
+}
+
 /* ----------------------------------------------------------------------------------------------------------- */
 
 void interrompe(int signal) {
-    kill(race_sim, SIGTERM);
-    wait(NULL);
+    if (getpid() == child_corrida) {
+        write_log(fp_log, "SIGNAL SIGUSR1 RECEIVED");
+        kill(race_sim, SIGTERM);
+        wait(NULL);
+    }
 }
 
 void gestor_corrida( ) {
     fd_set read_set;
     int number_of_chars;
     char str[MAX_CHAR];
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 10;
     #ifdef DEBUG
     write_log(fp_log, "RACE MANAGER PROCESS CREATED");
     #endif
@@ -388,7 +492,7 @@ void gestor_corrida( ) {
     }
     while (1) {
 		FD_ZERO(&read_set);
-		FD_SET(fd_named_pipe, &read_set);
+        FD_SET(fd_named_pipe, &read_set);
 		if (select(fd_named_pipe+1, &read_set, NULL, NULL, NULL) > 0) {
 			if(FD_ISSET(fd_named_pipe,&read_set)){
 				number_of_chars=read(fd_named_pipe, str, sizeof(str));
@@ -443,6 +547,29 @@ void gestor_corrida( ) {
                 }   
 			}
 		}
+        sem_wait(semaforo);
+        int total_carros = 0;
+        for (int e = 0; e<shared_race->size_equipas; e++) {
+            total_carros += shared_race->equipas[e].size_carros;
+        }
+        sem_post(semaforo);
+        sem_wait(semaforo);
+        if (shared_race->total_cars_finished < total_carros) {
+            sem_post(semaforo);
+            for (int i = 0; i < race_config->equipas; i++) {
+                //FD_ZERO(&read_set);
+                FD_SET(fd_unnamed_pipes[i][0], &read_set);
+                if (select(fd_unnamed_pipes[i][0]+1, &read_set, NULL, NULL, &timeout) > 0) {
+
+                    if(FD_ISSET(fd_unnamed_pipes[i][0],&read_set)) {
+                        read(fd_unnamed_pipes[i][0], &num_car_unnamed_pipe, sizeof(int));
+                        sem_wait(semaforo);
+                        shared_race->total_cars_finished++;
+                        sem_post(semaforo);
+                    }
+                }
+            }
+        }
 	}
 }
 
@@ -468,16 +595,11 @@ void gestor_avarias() {
             for (int c = 0; c < shared_race->equipas[t].size_carros; c++) {
                 if (shared_race->equipas[t].carros[c].reliability < min && !shared_race->equipas[t].carros[c].avariado) {
                     min = shared_race->equipas[t].carros[c].reliability;
-                    //ptr_flag = &shared_race->equipas[t].carros[c].avariado;
                     min_team_ind = t;
                     min_car_ind = c;
                 }
             }
         }
-        /*if (ptr_flag != NULL) {
-            *ptr_flag = 1;
-        }*/
-        //shared_race->equipas[min_team_ind].carros[min_car_ind].avariado = 1;
         sem_post(semaforo);
         if (min_team_ind >= 0 && min_car_ind >= 0) {
             shared_race->equipas[min_team_ind].carros[min_car_ind].avariado = 1;
@@ -486,13 +608,15 @@ void gestor_avarias() {
 
         if (min <= 100) {
             mal_msg mal_message;
-            mal_message.msg_type = min;
+            mal_message.msg_type = shared_race->equipas[min_team_ind].carros[min_car_ind].num;
             if (msgsnd(mqid, &mal_message, sizeof(mal_msg), 0)) {
                 perror("Error sending message");
             }
         }
         else if (min == INT_MAX) {
+            #ifdef DEBUG
             printf("Não há mais carros para avariar\n");
+            #endif
         }
         //reset min vars
         min = INT_MAX;
@@ -521,32 +645,24 @@ void gestor_equipa(int ind_eq) {
         for (int i = 0; i < shared_race->equipas[ind_eq].size_carros; i++) {
             threads_ids[i] = i+1;
             int num_car = shared_race->equipas[ind_eq].carros[i].num;
-            //sem_post(semaforo);
-            //pthread_create(&threads_carro[i], NULL, check_carros, &threads_ids[i]);
             pthread_create(&threads_carro[ind_eq * race_config->max_cars_team + i], NULL, check_carros, &num_car);
-            #ifdef DEBUG
             char* str = (char*)malloc(sizeof(char)*1024);
             sprintf(str, "CAR THREAD %d CREATED", num_car);
             write_log(fp_log, str);
             free(str);
-            #endif
-            //sem_wait(semaforo);
         }
         sem_post(semaforo);
         while (1) {
             sem_wait(semaforo);
-            printf("estado %s\n", shared_race->equipas[ind_eq].carros[0].estado);
             pthread_mutex_lock(&mutex_equipas[ind_eq]);
             while (strcmp(shared_race->equipas[ind_eq].box, "livre") == 0) {
                 pthread_cond_wait(&box_ocupied[ind_eq], &mutex_equipas[ind_eq]);
             }
-            printf("estado %s\n", shared_race->equipas[ind_eq].carros[0].estado);
             pthread_mutex_unlock(&mutex_equipas[ind_eq]);
             sem_post(semaforo);
             gerir_box(ind_eq);
         }
     }
-
     for (int i = 0; i < race_config->max_cars_team; i++) {
         pthread_join(threads_carro[ind_eq * race_config->max_cars_team + i], NULL);
     }
@@ -556,22 +672,25 @@ void gestor_equipa(int ind_eq) {
 void gerir_box(int ind_eq) {
     sem_wait(semaforo);
     int num_car = shared_race->equipas[ind_eq].flag_carro_box;
+    car_in_box(num_car);
     sem_post(semaforo);
-    carro car = encontra_carro(num_car); //a funçao já tem sincronização para a shared_mem
+    int ind_car = encontra_ind_carro(num_car);
     sem_wait(semaforo);
-    car.fuel = race_config->capacidade;
-    car.distancia = 0;
-    car.n_voltas += 1;
-
+    shared_race->equipas[ind_eq].carros[ind_car].fuel = race_config->capacidade;
+    shared_race->stats.num_paragens++;
+    shared_race->equipas[ind_eq].carros[ind_car].n_paragens++;
+    shared_race->equipas[ind_eq].carros[ind_car].distancia = 0;
+    shared_race->equipas[ind_eq].carros[ind_car].n_voltas += 1;
+    sleep(rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min);
     strcpy(shared_race->equipas[ind_eq].box, "livre");
     shared_race->equipas[ind_eq].flag_carro_box = 0;
+    strcpy(shared_race->equipas[ind_eq].carros[ind_car].estado, "corrida");
+    car_leave_box(num_car);
     sem_post(semaforo);
 }
 
 void *check_carros(void* num_car) {
     int num = *((int *)num_car);
-    //carro car = encontra_carro(num);
-    //equipa equipa = encontra_equipa(num);
     int ind_eq = encontra_ind_equipa(num);
     int ind_car = encontra_ind_carro(num);
 
@@ -581,7 +700,7 @@ void *check_carros(void* num_car) {
     int check_msg;
     int check_estado;
     while(1) {
-        check_msg = msgrcv(mqid, &message, sizeof(message), shared_race->equipas[ind_eq].carros[ind_car].reliability, IPC_NOWAIT);
+        check_msg = msgrcv(mqid, &message, sizeof(message), shared_race->equipas[ind_eq].carros[ind_car].num, IPC_NOWAIT);
         if (check_msg > 0) {
             new_malfunction(num);
             #ifndef DEBUG
@@ -602,13 +721,29 @@ void *check_carros(void* num_car) {
                 #ifndef DEBUG
                 printf("carro %02d desistiu\n", num);
                 #endif
+                close(fd_unnamed_pipes[ind_eq][0]);
+                num_car_unnamed_pipe = num;
+                write(fd_unnamed_pipes[ind_eq][1], &num_car_unnamed_pipe, sizeof(int));
                 break;
             }
             else if (check_estado == 1) {
                 // estado = terminado
+
+                sem_wait(semaforo);
+                shared_race->tabela_posicoes_finais[shared_race->size_tabela_posicoes_finais++] = num;
+                sem_post(semaforo);                
                 #ifndef DEBUG
                 printf("carro %02d terminou\n", num);
                 #endif
+                close(fd_named_pipe);
+                for (int i = 0; i < race_config->equipas; i++) {
+                    close(fd_unnamed_pipes[i][0]);
+                    if (i != ind_eq) {
+                        close(fd_unnamed_pipes[i][1]);
+                    }
+                }
+                num_car_unnamed_pipe = num;
+                write(fd_unnamed_pipes[ind_eq][1], &num_car_unnamed_pipe, sizeof(int));
                 break;
             }
         }
@@ -643,6 +778,7 @@ void init_shm() {
     shared_race->stats.num_paragens = 0;
     shared_race->stats.total_avarias = 0;
     shared_race->stats.n_carros_pista = 0;
+    shared_race->total_cars_finished = 0;
 }
 
 void init_semaphores() {
