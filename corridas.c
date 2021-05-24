@@ -411,7 +411,7 @@ void ordena_carros() {
 
     printf("RANK\tNUM\tEQUIPA\tVOLTAS\tPARAGENS\n");
 
-    for (int k = 0; k < shared_race->size_tabela_posicoes; k++) {
+    for (int k = 0; k < 5; k++) {
         int ind_eq = encontra_ind_equipa(shared_race->tabela_posicoes[k]);
         int ind_car = encontra_ind_carro(shared_race->tabela_posicoes[k]);
 
