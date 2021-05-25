@@ -341,7 +341,7 @@ int atualiza_carro(int num) {
     }
     else if (strcmp(shared_race->equipas[ind_eq].carros[ind_car].estado, "box") == 0) {
         strcpy(shared_race->equipas[ind_eq].box, "ocupada");
-        sleep(rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min); // random entre T_Box_min e T_Box_Max
+        sleep((rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min) * race_config->unidades_sec); // random entre T_Box_min e T_Box_Max
         strcpy(shared_race->equipas[ind_eq].box, "livre");
         shared_race->equipas[ind_eq].flag_carro_box = 0;
         shared_race->equipas[ind_eq].carros[ind_car].distancia = 0;
@@ -695,7 +695,7 @@ void gerir_box(int ind_eq) {
     shared_race->equipas[ind_eq].carros[ind_car].n_paragens++;
     shared_race->equipas[ind_eq].carros[ind_car].distancia = 0;
     shared_race->equipas[ind_eq].carros[ind_car].n_voltas += 1;
-    sleep(rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min);
+    sleep((rand() % (race_config->T_Box_Max - race_config->T_Box_min + 1) + race_config->T_Box_min) * race_config->unidades_sec);
     strcpy(shared_race->equipas[ind_eq].box, "livre");
     shared_race->equipas[ind_eq].flag_carro_box = 0;
     strcpy(shared_race->equipas[ind_eq].carros[ind_car].estado, "corrida");
@@ -771,7 +771,6 @@ void *check_carros(void* num_car) {
     sprintf(str2, "CAR THREAD %d LEAVING...", num);
     write_log(fp_log, str2);
     free(str2);
-    sleep(1);
     pthread_exit(NULL);
 }
 
