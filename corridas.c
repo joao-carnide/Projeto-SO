@@ -620,7 +620,7 @@ void gestor_avarias() {
             sem_post(semaforo);
         }
 
-        if (min <= 100) {
+        if (min < 100) {
             mal_msg mal_message;
             mal_message.msg_type = shared_race->equipas[min_team_ind].carros[min_car_ind].num;
             if (msgsnd(mqid, &mal_message, sizeof(mal_msg), 0)) {

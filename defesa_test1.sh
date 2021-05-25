@@ -1,0 +1,9 @@
+################# TESTE 1
+
+echo "ADDCAR TEAM: AA, CAR: 10, SPEED: 3300, CONSUMPTION: 3, RELIABILITY: 95" > named_pipe
+echo "ADDCAR TEAM: BB, CAR: 20, SPEED: 3400, CONSUMPTION: 3, RELIABILITY: 95" > named_pipe
+echo "ADDCAR TEAM: BB, CAR: 20, SPEED: 4000, CONSUMPTION: 5.5, RELIABILITY: 80" > named_pipe
+echo "ADDCAR TEAM: BB, CAR: 21, SPEED: 4000, CONSUMPTION: 5.5, RELIABILITY: 80" > named_pipe
+echo "ADDCAR TEAM: BB, CAR: 22, SPEED: 3800, CONSUMPTION: 3.8, RELIABILITY: 80" > named_pipe
+echo "START RACE!" > named_pipe
+echo "ADDCAR TEAMS: CC" > named_pipe
